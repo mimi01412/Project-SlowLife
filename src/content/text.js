@@ -38,6 +38,7 @@ export const UI_TEXT = {
     title: '仲間を待っています',
     roomIdLabel: '合言葉 / ルームID',
     roomIdHint: 'この合言葉を仲間に伝えてください',
+    copyRoomId: '合言葉をコピー',
     start: 'Play',
     waitingForHost: 'ホストの開始を待っています',
     hostBadge: 'HOST',
