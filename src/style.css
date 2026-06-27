@@ -1170,6 +1170,28 @@ button:hover {
     border-radius: 0;
   }
 
+  .lobby-header {
+    gap: 0.5rem;
+  }
+
+  .lobby-header > div {
+    min-width: 0;
+    flex: 1;
+  }
+
+  .lobby-header h1 {
+    font-size: clamp(1.15rem, 6vw, 1.45rem);
+    line-height: 1.25;
+    white-space: nowrap;
+  }
+
+  .lobby-header .text-button {
+    width: auto;
+    flex: 0 0 auto;
+    padding: 0.4rem 0.55rem;
+    font-size: 0.68rem;
+  }
+
   .lobby-players {
     grid-template-columns: 1fr;
   }
