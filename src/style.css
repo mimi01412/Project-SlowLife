@@ -205,6 +205,49 @@ canvas {
   image-rendering: crisp-edges;
 }
 
+.audio-toggle {
+  position: fixed;
+  z-index: 20;
+  bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px));
+  right: calc(0.75rem + env(safe-area-inset-right, 0px));
+  display: grid;
+  width: 42px;
+  height: 42px;
+  padding: 0;
+  place-items: center;
+  border: 1px solid rgba(210, 160, 255, 0.34);
+  border-radius: 50%;
+  background: rgba(31, 12, 55, 0.88);
+  color: #efb9ff;
+  box-shadow: 0 8px 24px rgba(8, 2, 19, 0.34);
+  backdrop-filter: blur(10px);
+}
+
+.audio-toggle:hover,
+.audio-toggle:focus-visible {
+  border-color: rgba(255, 183, 223, 0.68);
+  background: rgba(75, 28, 112, 0.94);
+}
+
+.audio-toggle svg {
+  width: 21px;
+  height: 21px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.audio-toggle .audio-off-icon,
+.audio-toggle.is-muted .audio-on-icon {
+  display: none;
+}
+
+.audio-toggle.is-muted .audio-off-icon {
+  display: block;
+}
+
 canvas.is-clearing-line {
   animation: board-clear-burst 380ms ease-in-out 2;
 }

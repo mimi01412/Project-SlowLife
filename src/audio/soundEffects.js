@@ -29,3 +29,9 @@ export function playLineClearSound() {
 export function playTurnSound() {
   playSound('myTurn');
 }
+
+export function setSoundEffectsMuted(muted) {
+  sounds.forEach((audio) => {
+    audio.muted = muted;
+  });
+}

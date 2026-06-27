@@ -6,11 +6,18 @@ import { renderLobby } from './ui/lobbyView.js';
 import { renderResultView } from './ui/resultView.js';
 import { UI_TEXT } from './content/text.js';
 import { BGM_TRACKS } from './content/assets.js';
-import { setBgm, stopBgm } from './audio/bgm.js';
-import { playLineClearSound, playPlacementSound, playTurnSound } from './audio/soundEffects.js';
+import { setBgm, setBgmMuted, stopBgm } from './audio/bgm.js';
+import {
+  playLineClearSound,
+  playPlacementSound,
+  playTurnSound,
+  setSoundEffectsMuted,
+} from './audio/soundEffects.js';
 
 const SESSION_KEY = 'slow-life-room-session';
+const AUDIO_MUTED_KEY = 'slow-life-audio-muted';
 const app = document.querySelector('#app');
+const audioToggle = document.querySelector('#audio-toggle');
 document.title = UI_TEXT.common.pageTitle;
 const roomClient = createRoomClient();
 let currentRoom = null;
@@ -19,6 +26,34 @@ let destroyCurrentView = () => {};
 let lastChimedTurn = null;
 const observedPlacementIds = new Map();
 const observedClearIds = new Map();
+
+function loadMutedSetting() {
+  try {
+    return localStorage.getItem(AUDIO_MUTED_KEY) === 'true';
+  } catch {
+    return false;
+  }
+}
+
+function applyMutedSetting(muted) {
+  setBgmMuted(muted);
+  setSoundEffectsMuted(muted);
+  audioToggle.classList.toggle('is-muted', muted);
+  audioToggle.setAttribute('aria-pressed', String(muted));
+  const label = muted ? 'ミュートを解除' : '音声をミュート';
+  audioToggle.setAttribute('aria-label', label);
+  audioToggle.title = label;
+}
+
+let isAudioMuted = loadMutedSetting();
+applyMutedSetting(isAudioMuted);
+audioToggle.addEventListener('click', () => {
+  isAudioMuted = !isAudioMuted;
+  applyMutedSetting(isAudioMuted);
+  try {
+    localStorage.setItem(AUDIO_MUTED_KEY, String(isAudioMuted));
+  } catch {}
+});
 
 function chimeIfMyTurn() {
   if (currentRoom?.status !== 'playing' || currentRoom.game?.currentPlayerId !== selfId) return;
