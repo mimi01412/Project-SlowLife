@@ -7,6 +7,7 @@ import { renderResultView } from './ui/resultView.js';
 import { UI_TEXT } from './content/text.js';
 import { BGM_TRACKS } from './content/assets.js';
 import { setBgm, stopBgm } from './audio/bgm.js';
+import { playLineClearSound, playPlacementSound, playTurnSound } from './audio/soundEffects.js';
 
 const SESSION_KEY = 'slow-life-room-session';
 const app = document.querySelector('#app');
@@ -15,6 +16,34 @@ const roomClient = createRoomClient();
 let currentRoom = null;
 let selfId = null;
 let destroyCurrentView = () => {};
+let lastChimedTurn = null;
+const observedPlacementIds = new Map();
+const observedClearIds = new Map();
+
+function chimeIfMyTurn() {
+  if (currentRoom?.status !== 'playing' || currentRoom.game?.currentPlayerId !== selfId) return;
+  const { currentPlayerId, turnNumber, turnEndsAt } = currentRoom.game;
+  const turnKey = `${currentRoom.id}:${currentPlayerId}:${turnNumber}:${turnEndsAt}`;
+  if (turnKey === lastChimedTurn) return;
+  lastChimedTurn = turnKey;
+  playTurnSound();
+}
+
+function soundIfPiecePlaced() {
+  const placementId = currentRoom?.game?.lastPlacementId ?? null;
+  const previousId = observedPlacementIds.get(currentRoom.id);
+  const hasObservedRoom = observedPlacementIds.has(currentRoom.id);
+  observedPlacementIds.set(currentRoom.id, placementId);
+  if (hasObservedRoom && placementId && placementId !== previousId) playPlacementSound();
+}
+
+function soundIfLinesCleared() {
+  const clearId = currentRoom?.game?.lastClear?.id ?? null;
+  const previousId = observedClearIds.get(currentRoom.id);
+  const hasObservedRoom = observedClearIds.has(currentRoom.id);
+  observedClearIds.set(currentRoom.id, clearId);
+  if (hasObservedRoom && clearId && clearId !== previousId) playLineClearSound();
+}
 
 function loadSession() {
   try {
@@ -44,6 +73,8 @@ function showRoom() {
   if (!currentRoom) return;
   destroyCurrentView();
   destroyCurrentView = () => {};
+  soundIfPiecePlaced();
+  soundIfLinesCleared();
 
   if (currentRoom.status === 'finished') {
     stopBgm();
@@ -67,6 +98,7 @@ function showRoom() {
 
   if (currentRoom.status === 'playing') {
     setBgm(BGM_TRACKS.playing);
+    chimeIfMyTurn();
     destroyCurrentView = renderGameView(app, {
       room: currentRoom,
       selfId,

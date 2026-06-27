@@ -34,12 +34,12 @@ async function copyText(value) {
 export function renderLobby(root, { room, selfId, onLeave, onStart }) {
   const isHost = room.hostId === selfId;
   const players = room.players
-    .map((player, index) => {
+    .map((player) => {
       const playerIsHost = player.id === room.hostId;
       const playerIsSelf = player.id === selfId;
       return `
         <li class="lobby-player${playerIsSelf ? ' is-self' : ''}">
-          <span class="lobby-avatar" style="--avatar-hue: ${190 + index * 31}">
+          <span class="lobby-avatar" style="--player-color: ${player.color}">
             ${escapeHtml(player.name.slice(0, 1).toUpperCase())}
           </span>
           <span class="lobby-player-name">

@@ -107,7 +107,7 @@ export function renderGameView(root, { room, selfId, onLeave, onPlace }) {
   const players = room.players
     .map(
       (player) => `
-        <li class="game-player${player.id === game.currentPlayerId ? ' is-current' : ''}${player.connected ? '' : ' is-offline'}">
+        <li class="game-player${player.id === game.currentPlayerId ? ' is-current' : ''}${player.connected ? '' : ' is-offline'}" style="--player-color: ${player.color}">
           <span>${escapeHtml(player.name)}</span>
           ${player.id === selfId ? `<small>${UI_TEXT.common.self}</small>` : ''}
           ${player.connected ? '' : `<small>${UI_TEXT.game.reconnecting}</small>`}
@@ -349,6 +349,13 @@ export function renderGameView(root, { room, selfId, onLeave, onPlace }) {
     renderInteraction();
   };
 
+  const onSecondPointer = (event) => {
+    if (dragPointerId === null || event.pointerId === dragPointerId || pending) return;
+    if (event.pointerType !== 'touch' && event.pointerType !== 'pen') return;
+    event.preventDefault();
+    rotateSelection();
+  };
+
   const onKeyDown = (event) => {
     if ((event.key === ' ' || event.key === 'Spacebar') && dragPointerId !== null) {
       event.preventDefault();
@@ -375,6 +382,7 @@ export function renderGameView(root, { room, selfId, onLeave, onPlace }) {
   window.addEventListener('pointermove', onPointerMove);
   window.addEventListener('pointerup', onPointerUp);
   window.addEventListener('pointercancel', onPointerCancel);
+  window.addEventListener('pointerdown', onSecondPointer);
   window.addEventListener('keydown', onKeyDown);
   const playersDialog = root.querySelector('#players-dialog');
   root.querySelector('#open-players').addEventListener('click', () => {
@@ -405,6 +413,7 @@ export function renderGameView(root, { room, selfId, onLeave, onPlace }) {
     window.removeEventListener('pointermove', onPointerMove);
     window.removeEventListener('pointerup', onPointerUp);
     window.removeEventListener('pointercancel', onPointerCancel);
+    window.removeEventListener('pointerdown', onSecondPointer);
     window.removeEventListener('keydown', onKeyDown);
   };
 }

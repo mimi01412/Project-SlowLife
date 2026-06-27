@@ -3,6 +3,8 @@ import { BOARD_SIZE, HAND_SIZE, TURN_DURATION_MS } from '../../src/game/config.j
 import { createRandomPiece, rotateCells } from '../../src/game/pieces.js';
 import { ERROR_TEXT, GAME_TEXT } from '../../src/content/text.js';
 
+const HAND_PIECE_COLORS = ['#ff78c6', '#a98bff', '#55d6e8'];
+
 export class GameError extends Error {
   constructor(code, message) {
     super(message);
@@ -12,7 +14,9 @@ export class GameError extends Error {
 }
 
 function fillHand(game) {
-  while (game.hand.length < HAND_SIZE) game.hand.push(createRandomPiece());
+  while (game.hand.length < HAND_SIZE) {
+    game.hand.push({ ...createRandomPiece(), color: HAND_PIECE_COLORS[game.hand.length] });
+  }
 }
 
 function findPlayer(players, playerId) {
@@ -60,6 +64,7 @@ export function createGameSession(players) {
     message: GAME_TEXT.playerTurn(players[0].name),
     turnEndsAt: Date.now() + TURN_DURATION_MS,
     lastPlacement: [],
+    lastPlacementId: null,
     lastClear: null,
     finished: false,
   };
@@ -83,7 +88,8 @@ export function placeGamePiece(game, playerId, move, players) {
   if (pieceIndex === -1) throw new GameError('PIECE_NOT_FOUND', ERROR_TEXT.pieceNotFound);
 
   const piece = game.hand[pieceIndex];
-  const rotatedPiece = { ...piece, cells: rotateCells(piece.cells, rotation) };
+  const player = findPlayer(players, playerId);
+  const rotatedPiece = { ...piece, color: player?.color ?? piece.color, cells: rotateCells(piece.cells, rotation) };
   if (!canPlacePiece(game.board, rotatedPiece, x, y)) {
     throw new GameError('CANNOT_PLACE', ERROR_TEXT.cannotPlace);
   }
@@ -93,6 +99,7 @@ export function placeGamePiece(game, playerId, move, players) {
     x: x + offsetX,
     y: y + offsetY,
   }));
+  game.lastPlacementId = `${game.turnNumber}-${Date.now()}`;
   const completedLines = getCompletedLines(game.board);
   const cleared = clearLines(game.board);
   game.lastClear = cleared > 0
@@ -104,7 +111,7 @@ export function placeGamePiece(game, playerId, move, players) {
     : null;
   game.cleared += cleared;
   game.score += cleared * 100;
-  game.hand.splice(pieceIndex, 1, createRandomPiece());
+  game.hand.splice(pieceIndex, 1, { ...createRandomPiece(), color: HAND_PIECE_COLORS[pieceIndex] });
 
   if (!canPlaceAnyPiece(game)) {
     game.finished = true;
