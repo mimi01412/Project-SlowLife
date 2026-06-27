@@ -4,6 +4,8 @@ import { rotateCells } from '../game/pieces.js';
 import { UI_TEXT } from '../content/text.js';
 
 let openParticipantsRoomId = null;
+const DRAG_THRESHOLD = 8;
+const playedClearEffects = new Map();
 
 function escapeHtml(value) {
   const element = document.createElement('span');
@@ -186,8 +188,11 @@ export function renderGameView(root, { room, selfId, onLeave, onPlace }) {
   let rotation = 0;
   let hoverCell = null;
   let dragPointerId = null;
+  let dragStart = null;
+  let dragMoved = false;
   let pending = false;
   let disposed = false;
+  let clearEffectFrame = null;
 
   function getSelectedPiece() {
     const piece = game.hand.find((candidate) => candidate.id === selectedPieceId);
@@ -196,7 +201,11 @@ export function renderGameView(root, { room, selfId, onLeave, onPlace }) {
 
   function renderInteraction() {
     root.querySelectorAll('[data-piece-id]').forEach((button) => {
-      button.classList.toggle('selected', button.dataset.pieceId === selectedPieceId);
+      const isSelected = button.dataset.pieceId === selectedPieceId;
+      button.classList.toggle('selected', isSelected);
+      const piece = game.hand.find((candidate) => candidate.id === button.dataset.pieceId);
+      const preview = isSelected ? getSelectedPiece() : piece;
+      if (preview) button.querySelector('.piece-preview').innerHTML = buildMiniGrid(preview);
     });
 
     const piece = getSelectedPiece();
@@ -222,6 +231,55 @@ export function renderGameView(root, { room, selfId, onLeave, onPlace }) {
     turnTimer.setAttribute('aria-label', `残り${remainingSeconds}秒`);
   }
 
+  function playLineClearEffect() {
+    const effect = game.lastClear;
+    if (!effect?.id || playedClearEffects.get(room.id) === effect.id) return;
+
+    const context = canvas.getContext('2d');
+    const startedAt = performance.now();
+    const duration = 760;
+    canvas.classList.add('is-clearing-line');
+
+    const drawFrame = (now) => {
+      if (disposed) return;
+      const progress = Math.min(1, (now - startedAt) / duration);
+      const glow = Math.sin(progress * Math.PI);
+      const sweepPosition = (CANVAS_SIZE + CELL_SIZE * 2) * progress - CELL_SIZE * 2;
+
+      drawBoard(canvas, game.board, null, game.lastPlacement);
+      context.save();
+      context.globalCompositeOperation = 'lighter';
+      context.fillStyle = `rgba(255, 211, 105, ${0.18 + glow * 0.58})`;
+      context.shadowColor = '#fff3a3';
+      context.shadowBlur = 18 + glow * 18;
+
+      effect.rows.forEach((row) => {
+        context.fillRect(0, row * CELL_SIZE, CANVAS_SIZE, CELL_SIZE);
+        context.fillStyle = `rgba(255, 255, 255, ${glow * 0.9})`;
+        context.fillRect(sweepPosition, row * CELL_SIZE, CELL_SIZE * 1.5, CELL_SIZE);
+        context.fillStyle = `rgba(255, 211, 105, ${0.18 + glow * 0.58})`;
+      });
+      effect.columns.forEach((column) => {
+        context.fillRect(column * CELL_SIZE, 0, CELL_SIZE, CANVAS_SIZE);
+        context.fillStyle = `rgba(255, 255, 255, ${glow * 0.9})`;
+        context.fillRect(column * CELL_SIZE, sweepPosition, CELL_SIZE, CELL_SIZE * 1.5);
+        context.fillStyle = `rgba(255, 211, 105, ${0.18 + glow * 0.58})`;
+      });
+      context.restore();
+
+      if (progress < 1) {
+        clearEffectFrame = window.requestAnimationFrame(drawFrame);
+      } else {
+        clearEffectFrame = null;
+        playedClearEffects.set(room.id, effect.id);
+        canvas.classList.remove('is-clearing-line');
+        drawBoard(canvas, game.board, null, game.lastPlacement);
+      }
+    };
+
+    clearEffectFrame = window.requestAnimationFrame(drawFrame);
+  }
+
   function rotateSelection() {
     if (!selectedPieceId || pending) return;
     rotation = (rotation + 1) % 4;
@@ -231,14 +289,27 @@ export function renderGameView(root, { room, selfId, onLeave, onPlace }) {
 
   const onPointerMove = (event) => {
     if (event.pointerId !== dragPointerId || pending) return;
+    if (!dragMoved && dragStart) {
+      dragMoved = Math.hypot(event.clientX - dragStart.x, event.clientY - dragStart.y) >= DRAG_THRESHOLD;
+    }
+    if (!dragMoved) return;
     hoverCell = getCellFromPointer(canvas, event, true);
     renderInteraction();
   };
 
   const onPointerUp = async (event) => {
     if (event.pointerId !== dragPointerId || pending) return;
+    if (!dragMoved) {
+      dragPointerId = null;
+      dragStart = null;
+      hoverCell = null;
+      rotateSelection();
+      return;
+    }
     const cell = getCellFromPointer(canvas, event, true);
     dragPointerId = null;
+    dragStart = null;
+    dragMoved = false;
     hoverCell = null;
 
     if (!cell || !selectedPieceId) {
@@ -270,17 +341,12 @@ export function renderGameView(root, { room, selfId, onLeave, onPlace }) {
   const onPointerCancel = (event) => {
     if (event.pointerId !== dragPointerId) return;
     dragPointerId = null;
+    dragStart = null;
+    dragMoved = false;
     selectedPieceId = null;
     hoverCell = null;
     message.textContent = UI_TEXT.game.placementCancelled;
     renderInteraction();
-  };
-
-  const onSecondPointer = (event) => {
-    if (dragPointerId === null || event.pointerId === dragPointerId) return;
-    if (event.pointerType !== 'touch' && event.pointerType !== 'pen') return;
-    event.preventDefault();
-    rotateSelection();
   };
 
   const onKeyDown = (event) => {
@@ -294,11 +360,14 @@ export function renderGameView(root, { room, selfId, onLeave, onPlace }) {
     button.addEventListener('pointerdown', (event) => {
       if (!isMyTurn || pending || (event.pointerType === 'mouse' && event.button !== 0)) return;
       event.preventDefault();
-      selectedPieceId = button.dataset.pieceId;
-      rotation = 0;
+      const nextPieceId = button.dataset.pieceId;
+      if (selectedPieceId !== nextPieceId) rotation = 0;
+      selectedPieceId = nextPieceId;
       hoverCell = null;
       dragPointerId = event.pointerId;
-      message.textContent = UI_TEXT.game.dragHelp;
+      dragStart = { x: event.clientX, y: event.clientY };
+      dragMoved = false;
+      message.textContent = 'ドラッグで配置、タップで回転できます。';
       renderInteraction();
     });
   });
@@ -306,7 +375,6 @@ export function renderGameView(root, { room, selfId, onLeave, onPlace }) {
   window.addEventListener('pointermove', onPointerMove);
   window.addEventListener('pointerup', onPointerUp);
   window.addEventListener('pointercancel', onPointerCancel);
-  window.addEventListener('pointerdown', onSecondPointer);
   window.addEventListener('keydown', onKeyDown);
   const playersDialog = root.querySelector('#players-dialog');
   root.querySelector('#open-players').addEventListener('click', () => {
@@ -328,14 +396,15 @@ export function renderGameView(root, { room, selfId, onLeave, onPlace }) {
   updateTurnTimer();
   const turnTimerInterval = window.setInterval(updateTurnTimer, 250);
   drawBoard(canvas, game.board, null, game.lastPlacement);
+  playLineClearEffect();
 
   return () => {
     disposed = true;
     window.clearInterval(turnTimerInterval);
+    if (clearEffectFrame !== null) window.cancelAnimationFrame(clearEffectFrame);
     window.removeEventListener('pointermove', onPointerMove);
     window.removeEventListener('pointerup', onPointerUp);
     window.removeEventListener('pointercancel', onPointerCancel);
-    window.removeEventListener('pointerdown', onSecondPointer);
     window.removeEventListener('keydown', onKeyDown);
   };
 }
