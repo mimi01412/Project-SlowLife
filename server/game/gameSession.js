@@ -1,4 +1,4 @@
-import { canPlacePiece, clearLines, createEmptyBoard, placePiece } from '../../src/game/board.js';
+import { canPlacePiece, clearLines, createEmptyBoard, getCompletedLines, placePiece } from '../../src/game/board.js';
 import { BOARD_SIZE, HAND_SIZE, TURN_DURATION_MS } from '../../src/game/config.js';
 import { createRandomPiece, rotateCells } from '../../src/game/pieces.js';
 import { ERROR_TEXT, GAME_TEXT } from '../../src/content/text.js';
@@ -60,6 +60,7 @@ export function createGameSession(players) {
     message: GAME_TEXT.playerTurn(players[0].name),
     turnEndsAt: Date.now() + TURN_DURATION_MS,
     lastPlacement: [],
+    lastClear: null,
     finished: false,
   };
   fillHand(game);
@@ -92,11 +93,18 @@ export function placeGamePiece(game, playerId, move, players) {
     x: x + offsetX,
     y: y + offsetY,
   }));
+  const completedLines = getCompletedLines(game.board);
   const cleared = clearLines(game.board);
+  game.lastClear = cleared > 0
+    ? {
+        id: `${game.turnNumber}-${Date.now()}`,
+        rows: completedLines.rows,
+        columns: completedLines.columns,
+      }
+    : null;
   game.cleared += cleared;
   game.score += cleared * 100;
-  game.hand.splice(pieceIndex, 1);
-  fillHand(game);
+  game.hand.splice(pieceIndex, 1, createRandomPiece());
 
   if (!canPlaceAnyPiece(game)) {
     game.finished = true;

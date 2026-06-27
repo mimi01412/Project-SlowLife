@@ -205,6 +205,15 @@ canvas {
   image-rendering: crisp-edges;
 }
 
+canvas.is-clearing-line {
+  animation: board-clear-burst 380ms ease-in-out 2;
+}
+
+@keyframes board-clear-burst {
+  0%, 100% { filter: brightness(1) saturate(1); }
+  50% { filter: brightness(1.35) saturate(1.3); }
+}
+
 .side-panel {
   display: flex;
   flex-direction: column;

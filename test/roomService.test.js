@@ -82,7 +82,9 @@ test('places a piece on the server and advances exactly one turn', () => {
   const { player: host } = service.create({ socketId: 'host-socket', name: 'Host', roomId: 'turn-room' });
   const { player: guest } = service.join({ socketId: 'guest-socket', name: 'Guest', roomId: 'turn-room' });
   const room = service.start('host-socket');
-  const piece = room.game.hand[0];
+  const selectedIndex = 1;
+  const previousPieceIds = room.game.hand.map((piece) => piece.id);
+  const piece = room.game.hand[selectedIndex];
 
   let move = null;
   for (let rotation = 0; rotation < 4 && !move; rotation += 1) {
@@ -107,7 +109,9 @@ test('places a piece on the server and advances exactly one turn', () => {
   }));
   assert.deepEqual(room.game.lastPlacement, placedCells);
   assert.equal(room.game.hand.length, 3);
-  assert.notEqual(room.game.hand[0].id, piece.id);
+  assert.equal(room.game.hand[0].id, previousPieceIds[0]);
+  assert.notEqual(room.game.hand[selectedIndex].id, previousPieceIds[selectedIndex]);
+  assert.equal(room.game.hand[2].id, previousPieceIds[2]);
   assert.equal(room.game.turnOrder[0], host.id);
 });
 

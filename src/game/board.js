@@ -24,7 +24,7 @@ export function placePiece(board, piece, x, y) {
   });
 }
 
-export function clearLines(board) {
+export function getCompletedLines(board) {
   const rowsToClear = [];
   const colsToClear = [];
 
@@ -35,6 +35,12 @@ export function clearLines(board) {
   for (let col = 0; col < BOARD_SIZE; col += 1) {
     if (board.every((row) => row[col])) colsToClear.push(col);
   }
+
+  return { rows: rowsToClear, columns: colsToClear };
+}
+
+export function clearLines(board) {
+  const { rows: rowsToClear, columns: colsToClear } = getCompletedLines(board);
 
   rowsToClear.forEach((row) => {
     board[row] = Array(BOARD_SIZE).fill(null);
