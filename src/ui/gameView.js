@@ -28,7 +28,7 @@ function buildMiniGrid(piece) {
     .join('');
 }
 
-function drawBoard(canvas, board, preview = null) {
+function drawBoard(canvas, board, preview = null, lastPlacement = []) {
   const context = canvas.getContext('2d');
   context.clearRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
   const boardGradient = context.createLinearGradient(0, 0, CANVAS_SIZE, CANVAS_SIZE);
@@ -58,6 +58,16 @@ function drawBoard(canvas, board, preview = null) {
       }
     }
   }
+
+  lastPlacement.forEach(({ x, y }) => {
+    context.save();
+    context.strokeStyle = '#fff3a3';
+    context.lineWidth = 4;
+    context.shadowColor = '#ffd369';
+    context.shadowBlur = 14;
+    context.strokeRect(x * CELL_SIZE + 4, y * CELL_SIZE + 4, CELL_SIZE - 8, CELL_SIZE - 8);
+    context.restore();
+  });
 
   if (!preview) return;
   preview.piece.cells.forEach(([offsetX, offsetY]) => {
@@ -131,14 +141,17 @@ export function renderGameView(root, { room, selfId, onLeave, onPlace }) {
         </div>
 
         <div class="turn-banner${isMyTurn ? ' is-mine' : ''}${game.finished ? ' is-finished' : ''}">
-          <span>${
-            game.finished
-              ? UI_TEXT.game.finished
-              : isMyTurn
-                ? UI_TEXT.game.yourTurn
-                : UI_TEXT.game.playerTurn(escapeHtml(currentPlayer?.name ?? ''))
-          }</span>
-          <small id="game-message">${escapeHtml(game.message)}</small>
+          <div class="turn-status">
+            <span>${
+              game.finished
+                ? UI_TEXT.game.finished
+                : isMyTurn
+                  ? UI_TEXT.game.yourTurn
+                  : UI_TEXT.game.playerTurn(escapeHtml(currentPlayer?.name ?? ''))
+            }</span>
+            <small id="game-message">${escapeHtml(game.message)}</small>
+          </div>
+          <strong id="turn-timer" class="turn-timer" aria-live="off"></strong>
         </div>
 
         <div class="layout">
@@ -166,6 +179,9 @@ export function renderGameView(root, { room, selfId, onLeave, onPlace }) {
 
   const canvas = root.querySelector('#board');
   const message = root.querySelector('#game-message');
+  const turnTimer = root.querySelector('#turn-timer');
+  const receivedAt = Date.now();
+  const serverNow = Number(room.serverNow) || receivedAt;
   let selectedPieceId = null;
   let rotation = 0;
   let hoverCell = null;
@@ -191,7 +207,19 @@ export function renderGameView(root, { room, selfId, onLeave, onPlace }) {
           canPlace: canPlacePiece(game.board, piece, hoverCell.x, hoverCell.y),
         }
       : null;
-    drawBoard(canvas, game.board, preview);
+    drawBoard(canvas, game.board, preview, game.lastPlacement);
+  }
+
+  function updateTurnTimer() {
+    if (!game.turnEndsAt) {
+      turnTimer.textContent = '';
+      return;
+    }
+    const estimatedServerNow = serverNow + (Date.now() - receivedAt);
+    const remainingSeconds = Math.max(0, Math.ceil((game.turnEndsAt - estimatedServerNow) / 1000));
+    turnTimer.textContent = `${remainingSeconds}`;
+    turnTimer.classList.toggle('is-urgent', remainingSeconds <= 5);
+    turnTimer.setAttribute('aria-label', `残り${remainingSeconds}秒`);
   }
 
   function rotateSelection() {
@@ -297,10 +325,13 @@ export function renderGameView(root, { room, selfId, onLeave, onPlace }) {
     onLeave();
   });
   if (openParticipantsRoomId === room.id) playersDialog.showModal();
-  drawBoard(canvas, game.board);
+  updateTurnTimer();
+  const turnTimerInterval = window.setInterval(updateTurnTimer, 250);
+  drawBoard(canvas, game.board, null, game.lastPlacement);
 
   return () => {
     disposed = true;
+    window.clearInterval(turnTimerInterval);
     window.removeEventListener('pointermove', onPointerMove);
     window.removeEventListener('pointerup', onPointerUp);
     window.removeEventListener('pointercancel', onPointerCancel);

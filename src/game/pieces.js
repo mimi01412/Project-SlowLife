@@ -1,4 +1,5 @@
 const GRID_SIZE = 3;
+const SIZE_WEIGHTS = [8, 12, 18, 22, 20, 10, 6, 3, 1];
 const COLORS = [
   '#facc15',
   '#a78bfa',
@@ -57,10 +58,30 @@ function createAllShapes() {
 }
 
 let shapes = null;
+let shapesBySize = null;
 
 function getShapes() {
   if (!shapes) shapes = createAllShapes();
   return shapes;
+}
+
+function getShapesBySize() {
+  if (!shapesBySize) {
+    shapesBySize = Array.from({ length: GRID_SIZE * GRID_SIZE }, () => []);
+    getShapes().forEach((cells) => shapesBySize[cells.length - 1].push(cells));
+  }
+  return shapesBySize;
+}
+
+function selectSizeIndex(randomValue) {
+  const totalWeight = SIZE_WEIGHTS.reduce((total, weight) => total + weight, 0);
+  let target = randomValue * totalWeight;
+
+  for (let index = 0; index < SIZE_WEIGHTS.length; index += 1) {
+    target -= SIZE_WEIGHTS[index];
+    if (target < 0) return index;
+  }
+  return SIZE_WEIGHTS.length - 1;
 }
 
 function createPiece(cells, random) {
@@ -85,7 +106,8 @@ export function rotateCells(cells, rotationCount = 1) {
 }
 
 export function createRandomPiece(random = Math.random) {
-  const availableShapes = getShapes();
-  const cells = availableShapes[Math.floor(random() * availableShapes.length)];
+  const availableSizes = getShapesBySize();
+  const shapesOfSize = availableSizes[selectSizeIndex(random())];
+  const cells = shapesOfSize[Math.floor(random() * shapesOfSize.length)];
   return createPiece(cells, random);
 }

@@ -23,7 +23,7 @@ function isConnected(cells) {
 
 test('creates connected pieces that fit inside a 3 by 3 grid', () => {
   for (let index = 0; index < 512; index += 1) {
-    const values = [(index + 0.5) / 512, 0, 0.5];
+    const values = [(index + 0.5) / 512, (index + 0.5) / 512, 0, 0.5];
     const piece = createRandomPiece(() => values.shift() ?? 0.5);
 
     assert.ok(piece.cells.length >= 1 && piece.cells.length <= 9);
@@ -38,9 +38,21 @@ test('can generate both a single cell and a full 3 by 3 piece', () => {
   assert.equal(createRandomPiece(() => 0.999999).cells.length, 9);
 });
 
+test('selects pieces of five cells or fewer 80 percent of the time', () => {
+  const counts = Array(9).fill(0);
+  for (let index = 0; index < 100; index += 1) {
+    const values = [(index + 0.5) / 100, 0, 0, 0.5];
+    const piece = createRandomPiece(() => values.shift() ?? 0.5);
+    counts[piece.cells.length - 1] += 1;
+  }
+
+  assert.deepEqual(counts, [8, 12, 18, 22, 20, 10, 6, 3, 1]);
+  assert.equal(counts.slice(0, 5).reduce((total, count) => total + count, 0), 80);
+});
+
 test('keeps every generated rotation normalized within a 3 by 3 grid', () => {
   for (let index = 0; index < 512; index += 1) {
-    const values = [(index + 0.5) / 512, 0, 0.5];
+    const values = [(index + 0.5) / 512, (index + 0.5) / 512, 0, 0.5];
     const piece = createRandomPiece(() => values.shift() ?? 0.5);
 
     for (let rotation = 0; rotation < 4; rotation += 1) {

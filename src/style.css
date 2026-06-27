@@ -304,6 +304,35 @@ canvas {
   font-weight: 500;
 }
 
+.turn-status {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.turn-timer {
+  display: grid;
+  width: 44px;
+  height: 44px;
+  flex: 0 0 44px;
+  place-items: center;
+  border: 2px solid rgba(255, 211, 105, 0.55);
+  border-radius: 50%;
+  background: rgba(255, 211, 105, 0.1);
+  color: var(--gold);
+  font-size: 1.05rem;
+  font-variant-numeric: tabular-nums;
+  box-shadow: 0 0 18px rgba(255, 211, 105, 0.16);
+}
+
+.turn-timer.is-urgent {
+  border-color: #fb7185;
+  color: #fecdd3;
+  background: rgba(251, 113, 133, 0.14);
+  animation: soft-pulse 800ms ease-in-out infinite;
+}
+
 .side-panel h2 {
   margin: 0 0 0.75rem;
   font-size: 0.84rem;
@@ -1764,8 +1793,8 @@ canvas {
   }
 
   .turn-banner {
-    align-items: flex-start;
-    flex-direction: column;
+    align-items: center;
+    flex-direction: row;
   }
 
   .result-page {

@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { createGameSession, placeGamePiece, removePlayerFromGame } from '../game/gameSession.js';
+import { createGameSession, expireGameTurn, placeGamePiece, removePlayerFromGame } from '../game/gameSession.js';
 import { ERROR_TEXT } from '../../src/content/text.js';
 
 const MAX_PLAYERS = 8;
@@ -200,6 +200,12 @@ export function createRoomService() {
     return room;
   }
 
+  function expireTurn(roomId, expectedTurnEndsAt) {
+    const room = getRoomById(roomId);
+    if (!room?.game || room.status !== 'playing') return null;
+    return expireGameTurn(room.game, room.players, expectedTurnEndsAt) ? room : null;
+  }
+
   function getHostFinishedRoom(socketId) {
     const room = getRoomBySocketId(socketId);
     const player = room ? findPlayerBySocketId(room, socketId) : null;
@@ -236,6 +242,7 @@ export function createRoomService() {
     resume,
     start,
     place,
+    expireTurn,
     rematch,
     returnToLobby,
     leave,
@@ -248,6 +255,7 @@ export function createRoomService() {
 
 export function serializeRoom(room) {
   return {
+    serverNow: Date.now(),
     id: room.id,
     status: room.status,
     hostId: room.hostId,
