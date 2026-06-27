@@ -7,7 +7,6 @@ const state = {
   playerName: '',
   roomMode: 'create',
   roomId: '',
-  notice: '',
 };
 
 function escapeHtml(value) {
@@ -147,7 +146,6 @@ function renderRoomScreen() {
             ${isCreateMode ? '部屋を作成' : '部屋に参加'}
             <span aria-hidden="true">→</span>
           </button>
-          ${state.notice ? `<p class="stage-notice" role="status">${escapeHtml(state.notice)}</p>` : ''}
         </form>
       </section>
     </main>
@@ -187,7 +185,6 @@ export function createEntryFlow(root, { onRoomRequest = () => {} } = {}) {
 
         state.playerName = normalizeInput(input.value);
         state.screen = 'room';
-        state.notice = '';
         render();
       });
       return;
@@ -195,14 +192,12 @@ export function createEntryFlow(root, { onRoomRequest = () => {} } = {}) {
 
     root.querySelector('#edit-name').addEventListener('click', () => {
       state.screen = 'name';
-      state.notice = '';
       render();
     });
 
     root.querySelectorAll('[data-room-mode]').forEach((button) => {
       button.addEventListener('click', () => {
         state.roomMode = button.dataset.roomMode;
-        state.notice = '';
         render();
       });
     });
@@ -211,24 +206,32 @@ export function createEntryFlow(root, { onRoomRequest = () => {} } = {}) {
     const roomInput = roomForm.elements.roomId;
     roomInput.addEventListener('input', () => {
       state.roomId = roomInput.value;
-      state.notice = '';
       showError('room-error', '');
     });
 
-    roomForm.addEventListener('submit', (event) => {
+    roomForm.addEventListener('submit', async (event) => {
       event.preventDefault();
       const error = validateRoomId(roomInput.value);
       showError('room-error', error);
       if (error) return roomInput.focus();
 
       state.roomId = normalizeInput(roomInput.value);
-      onRoomRequest({
-        type: state.roomMode,
-        playerName: state.playerName,
-        roomId: state.roomId,
-      });
-      state.notice = '入力内容を確認できました。次の段階でロビーへ接続します。';
-      render();
+      const submitButton = roomForm.querySelector('[type="submit"]');
+      submitButton.disabled = true;
+      submitButton.setAttribute('aria-busy', 'true');
+
+      try {
+        await onRoomRequest({
+          type: state.roomMode,
+          playerName: state.playerName,
+          roomId: state.roomId,
+        });
+      } catch (requestError) {
+        showError('room-error', requestError.message);
+        roomInput.focus();
+        submitButton.disabled = false;
+        submitButton.removeAttribute('aria-busy');
+      }
     });
   }
 
