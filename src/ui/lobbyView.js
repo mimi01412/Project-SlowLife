@@ -6,6 +6,31 @@ function escapeHtml(value) {
   return element.innerHTML;
 }
 
+async function copyText(value) {
+  if (navigator.clipboard?.writeText) {
+    try {
+      await navigator.clipboard.writeText(value);
+      return;
+    } catch {
+      // 権限などで失敗した場合は、下の互換処理を試します。
+    }
+  }
+
+  const textarea = document.createElement('textarea');
+  textarea.value = value;
+  textarea.setAttribute('readonly', '');
+  textarea.style.position = 'fixed';
+  textarea.style.opacity = '0';
+  document.body.append(textarea);
+  textarea.select();
+
+  try {
+    if (!document.execCommand('copy')) throw new Error('Copy failed');
+  } finally {
+    textarea.remove();
+  }
+}
+
 export function renderLobby(root, { room, selfId, onLeave, onStart }) {
   const isHost = room.hostId === selfId;
   const players = room.players
@@ -40,6 +65,20 @@ export function renderLobby(root, { room, selfId, onLeave, onStart }) {
 
         <div class="room-code-panel">
           <span>${UI_TEXT.lobby.roomIdLabel}</span>
+          <button
+            id="copy-room-code"
+            class="room-code-copy-icon"
+            type="button"
+            aria-label="${escapeHtml(`${UI_TEXT.lobby.copyRoomId}: ${room.id}`)}"
+          >
+            <svg class="copy-icon" viewBox="0 0 24 24">
+              <rect x="8" y="8" width="11" height="11" rx="2"></rect>
+              <path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"></path>
+            </svg>
+            <svg class="check-icon" viewBox="0 0 24 24">
+              <path d="m5 12 4 4L19 6"></path>
+            </svg>
+          </button>
           <strong>${escapeHtml(room.id)}</strong>
           <small>${UI_TEXT.lobby.roomIdHint}</small>
         </div>
@@ -64,6 +103,19 @@ export function renderLobby(root, { room, selfId, onLeave, onStart }) {
   `;
 
   root.querySelector('#leave-room').addEventListener('click', onLeave);
+
+  const copyButton = root.querySelector('#copy-room-code');
+  let copyStatusTimer = null;
+  copyButton.addEventListener('click', async () => {
+    if (copyStatusTimer) window.clearTimeout(copyStatusTimer);
+    try {
+      await copyText(room.id);
+      copyButton.classList.add('is-copied');
+      copyStatusTimer = window.setTimeout(() => {
+        copyButton.classList.remove('is-copied');
+      }, 1800);
+    } catch {}
+  });
 
   const startButton = root.querySelector('#start-game');
   startButton?.addEventListener('click', async () => {
