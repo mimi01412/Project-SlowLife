@@ -1,0 +1,148 @@
+:root {
+  color-scheme: dark;
+  font-family: 'Segoe UI', sans-serif;
+  background: #020617;
+  color: #f8fafc;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(135deg, #020617, #0f172a);
+}
+
+.game-shell {
+  width: min(96vw, 980px);
+  padding: 1.25rem;
+  border-radius: 20px;
+  background: rgba(15, 23, 42, 0.9);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.35);
+}
+
+h1 {
+  margin: 0 0 0.75rem;
+  font-size: 1.6rem;
+}
+
+.hud {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.7rem;
+  margin-bottom: 0.9rem;
+  font-size: 0.95rem;
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: 1fr 260px;
+  gap: 1rem;
+}
+
+canvas {
+  width: 100%;
+  max-width: 640px;
+  border: 2px solid #f8fafc;
+  border-radius: 10px;
+  background: #020617;
+}
+
+.side-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.panel {
+  padding: 0.9rem;
+  border-radius: 12px;
+  background: rgba(30, 41, 59, 0.8);
+}
+
+.hand {
+  display: grid;
+  gap: 0.6rem;
+}
+
+.piece-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  align-items: flex-start;
+  width: 100%;
+  padding: 0.55rem;
+  border: 1px solid #475569;
+  border-radius: 10px;
+  background: #0f172a;
+  color: #f8fafc;
+  cursor: pointer;
+}
+
+.piece-card.selected {
+  border-color: #facc15;
+  box-shadow: 0 0 0 2px rgba(250, 204, 21, 0.25);
+}
+
+.piece-name {
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+.piece-preview {
+  display: grid;
+  grid-template-columns: repeat(3, 14px);
+  gap: 4px;
+  width: max-content;
+}
+
+.mini-cell {
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  background: rgba(148, 163, 184, 0.2);
+}
+
+.mini-cell.active {
+  background: #f8fafc;
+}
+
+.controls {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+button {
+  border: 0;
+  border-radius: 8px;
+  padding: 0.6rem 0.75rem;
+  background: #38bdf8;
+  color: #082f49;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+button:hover {
+  filter: brightness(1.1);
+}
+
+#message {
+  margin: 0;
+  color: #cbd5e1;
+  font-size: 0.95rem;
+}
+
+@media (max-width: 800px) {
+  .layout {
+    grid-template-columns: 1fr;
+  }
+
+  canvas {
+    max-width: 100%;
+  }
+}
