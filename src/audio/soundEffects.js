@@ -4,7 +4,7 @@ const sounds = new Map(
   Object.entries(SOUND_EFFECTS).map(([name, source]) => {
     const audio = new Audio(source);
     audio.preload = 'auto';
-    audio.volume = 0.7;
+    audio.volume = 0.35;
     return [name, audio];
   }),
 );
