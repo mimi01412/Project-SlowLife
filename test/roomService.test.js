@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { canPlacePiece } from '../src/game/board.js';
-import { BOARD_SIZE } from '../src/game/config.js';
+import { BOARD_SIZE, TURN_DURATION_MS } from '../src/game/config.js';
 import { rotateCells } from '../src/game/pieces.js';
 import { createRoomService, RoomError } from '../server/room/roomService.js';
 
@@ -69,7 +69,7 @@ test('only the host can start and the server creates a shared game state', () =>
   assert.equal(room.status, 'playing');
   assert.equal(room.game.currentPlayerId, host.id);
   assert.equal(room.game.hand.length, 3);
-  assert.equal(room.game.board.length, 16);
+  assert.equal(room.game.board.length, BOARD_SIZE);
 
   assert.throws(
     () => service.join({ socketId: 'late-id', name: 'Late', roomId: 'start-room' }),
@@ -101,9 +101,42 @@ test('places a piece on the server and advances exactly one turn', () => {
   service.place('host-socket', move);
   assert.equal(room.game.currentPlayerId, guest.id);
   assert.equal(room.game.turnNumber, 2);
+  const placedCells = rotateCells(piece.cells, move.rotation).map(([offsetX, offsetY]) => ({
+    x: move.x + offsetX,
+    y: move.y + offsetY,
+  }));
+  assert.deepEqual(room.game.lastPlacement, placedCells);
   assert.equal(room.game.hand.length, 3);
   assert.notEqual(room.game.hand[0].id, piece.id);
   assert.equal(room.game.turnOrder[0], host.id);
+});
+
+test('advances the turn after the 20 second deadline', () => {
+  const service = createRoomService();
+  const { player: host } = service.create({ socketId: 'host-socket', name: 'Host', roomId: 'timer-room' });
+  const { player: guest } = service.join({ socketId: 'guest-socket', name: 'Guest', roomId: 'timer-room' });
+  const room = service.start('host-socket');
+
+  assert.equal(room.game.currentPlayerId, host.id);
+  assert.ok(room.game.turnEndsAt > Date.now());
+  assert.ok(room.game.turnEndsAt <= Date.now() + TURN_DURATION_MS);
+
+  room.game.turnEndsAt = Date.now() - 1;
+  const expiredDeadline = room.game.turnEndsAt;
+  assert.throws(
+    () => service.place('host-socket', {
+      pieceId: room.game.hand[0].id,
+      x: 0,
+      y: 0,
+      rotation: 0,
+    }),
+    (error) => error.code === 'TURN_EXPIRED',
+  );
+  assert.equal(service.expireTurn(room.id, expiredDeadline), room);
+  assert.equal(room.game.currentPlayerId, guest.id);
+  assert.equal(room.game.turnNumber, 2);
+  assert.ok(room.game.turnEndsAt > expiredDeadline);
+  assert.equal(service.expireTurn(room.id, expiredDeadline), null);
 });
 
 test('resumes a disconnected player with a stable player id', () => {

@@ -5,9 +5,16 @@ import { ERROR_TEXT } from '../../src/content/text.js';
 const channelFor = (roomId) => `room:${roomId}`;
 const RECONNECT_GRACE_PERIOD = 30_000;
 const disconnectTimers = new Map();
+const turnTimers = new Map();
 
 function emitRoomState(io, room) {
   io.to(channelFor(room.id)).emit('room:state', serializeRoom(room));
+}
+
+function clearTurnTimer(roomId) {
+  const timer = turnTimers.get(roomId);
+  if (timer) clearTimeout(timer);
+  turnTimers.delete(roomId);
 }
 
 function sendResult(callback, action) {
@@ -27,6 +34,27 @@ function sendResult(callback, action) {
 }
 
 export function registerRoomHandlers(io, socket, roomService) {
+  function scheduleTurnTimer(room) {
+    clearTurnTimer(room.id);
+    if (room.status !== 'playing' || !room.game?.turnEndsAt) return;
+
+    const expectedTurnEndsAt = room.game.turnEndsAt;
+    const timer = setTimeout(() => {
+      turnTimers.delete(room.id);
+      const updatedRoom = roomService.expireTurn(room.id, expectedTurnEndsAt);
+      if (!updatedRoom) {
+        const currentRoom = roomService.getRoomById(room.id);
+        if (currentRoom?.game?.turnEndsAt === expectedTurnEndsAt && Date.now() < expectedTurnEndsAt) {
+          scheduleTurnTimer(currentRoom);
+        }
+        return;
+      }
+      emitRoomState(io, updatedRoom);
+      scheduleTurnTimer(updatedRoom);
+    }, Math.max(0, expectedTurnEndsAt - Date.now()));
+    turnTimers.set(room.id, timer);
+  }
+
   function enterRoom(event, payload, callback) {
     sendResult(callback, () => {
       const previousRoom = roomService.getRoomBySocketId(socket.id);
@@ -65,6 +93,7 @@ export function registerRoomHandlers(io, socket, roomService) {
   socket.on('room:start', (callback) => {
     sendResult(callback, () => {
       const room = roomService.start(socket.id);
+      scheduleTurnTimer(room);
       queueMicrotask(() => emitRoomState(io, room));
       return { room: serializeRoom(room) };
     });
@@ -73,6 +102,7 @@ export function registerRoomHandlers(io, socket, roomService) {
   socket.on('game:place', (move, callback) => {
     sendResult(callback, () => {
       const room = roomService.place(socket.id, move);
+      scheduleTurnTimer(room);
       queueMicrotask(() => emitRoomState(io, room));
       return { room: serializeRoom(room) };
     });
@@ -81,6 +111,7 @@ export function registerRoomHandlers(io, socket, roomService) {
   socket.on('game:rematch', (callback) => {
     sendResult(callback, () => {
       const room = roomService.rematch(socket.id);
+      scheduleTurnTimer(room);
       queueMicrotask(() => emitRoomState(io, room));
       return { room: serializeRoom(room) };
     });
@@ -89,6 +120,7 @@ export function registerRoomHandlers(io, socket, roomService) {
   socket.on('game:return-lobby', (callback) => {
     sendResult(callback, () => {
       const room = roomService.returnToLobby(socket.id);
+      scheduleTurnTimer(room);
       queueMicrotask(() => emitRoomState(io, room));
       return { room: serializeRoom(room) };
     });
@@ -98,7 +130,12 @@ export function registerRoomHandlers(io, socket, roomService) {
     const currentRoom = roomService.getRoomBySocketId(socket.id);
     const result = roomService.leave(socket.id);
     if (currentRoom) socket.leave(channelFor(currentRoom.id));
-    if (result?.room) emitRoomState(io, result.room);
+    if (result?.room) {
+      scheduleTurnTimer(result.room);
+      emitRoomState(io, result.room);
+    } else if (currentRoom) {
+      clearTurnTimer(currentRoom.id);
+    }
     callback({ ok: true });
   });
 
@@ -111,7 +148,12 @@ export function registerRoomHandlers(io, socket, roomService) {
     const timer = setTimeout(() => {
       disconnectTimers.delete(result.playerId);
       const removalResult = roomService.removeDisconnected(roomId, result.playerId);
-      if (removalResult?.room) emitRoomState(io, removalResult.room);
+      if (removalResult?.room) {
+        scheduleTurnTimer(removalResult.room);
+        emitRoomState(io, removalResult.room);
+      } else if (removalResult?.deletedRoomId) {
+        clearTurnTimer(removalResult.deletedRoomId);
+      }
     }, RECONNECT_GRACE_PERIOD);
     disconnectTimers.set(result.playerId, timer);
   });
