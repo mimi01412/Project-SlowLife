@@ -4,7 +4,7 @@ function escapeHtml(value) {
   return element.innerHTML;
 }
 
-export function renderLobby(root, { room, selfId, onLeave }) {
+export function renderLobby(root, { room, selfId, onLeave, onStart }) {
   const isHost = room.hostId === selfId;
   const players = room.players
     .map((player, index) => {
@@ -53,7 +53,7 @@ export function renderLobby(root, { room, selfId, onLeave }) {
         <div class="lobby-action">
           ${
             isHost
-              ? '<button class="primary-button" type="button" disabled>Play <span>→</span></button><p>Playは次のフェーズで有効になります。</p>'
+              ? '<button id="start-game" class="primary-button" type="button">Play <span>→</span></button><p id="start-error" class="action-error" role="alert"></p>'
               : '<div class="waiting-indicator"><i></i><span>ホストの開始を待っています</span></div>'
           }
         </div>
@@ -62,4 +62,17 @@ export function renderLobby(root, { room, selfId, onLeave }) {
   `;
 
   root.querySelector('#leave-room').addEventListener('click', onLeave);
+
+  const startButton = root.querySelector('#start-game');
+  startButton?.addEventListener('click', async () => {
+    startButton.disabled = true;
+    startButton.setAttribute('aria-busy', 'true');
+    try {
+      await onStart();
+    } catch (error) {
+      root.querySelector('#start-error').textContent = error.message;
+      startButton.disabled = false;
+      startButton.removeAttribute('aria-busy');
+    }
+  });
 }

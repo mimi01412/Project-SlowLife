@@ -22,10 +22,17 @@ export function createRoomClient() {
   return {
     createRoom: (payload) => request('room:create', payload),
     joinRoom: (payload) => request('room:join', payload),
+    resumeRoom: (payload) => request('room:resume', payload),
+    startRoom: () => request('room:start'),
+    placePiece: (payload) => request('game:place', payload),
     leaveRoom: () => request('room:leave'),
     onRoomState(handler) {
       socket.on('room:state', handler);
       return () => socket.off('room:state', handler);
+    },
+    onReconnect(handler) {
+      socket.io.on('reconnect', handler);
+      return () => socket.io.off('reconnect', handler);
     },
   };
 }
