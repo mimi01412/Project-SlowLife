@@ -4,7 +4,7 @@ import { ERROR_TEXT } from '../content/text.js';
 const REQUEST_TIMEOUT = 5000;
 
 export function createRoomClient() {
-  const socket = io();
+  const socket = io(import.meta.env.VITE_SOCKET_URL);
 
   function request(event, payload) {
     return new Promise((resolve, reject) => {

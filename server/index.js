@@ -12,7 +12,18 @@ const rootDirectory = path.resolve(path.dirname(fileURLToPath(import.meta.url)),
 
 const app = express();
 const httpServer = createServer(app);
-const io = new Server(httpServer);
+const clientUrl = process.env.CLIENT_URL || 'http://localhost:5173';
+
+app.get('/health', (request, response) => {
+  response.send('ok');
+});
+
+const io = new Server(httpServer, {
+  cors: {
+    origin: clientUrl,
+    methods: ['GET', 'POST'],
+  },
+});
 const roomService = createRoomService();
 
 io.on('connection', (socket) => registerRoomHandlers(io, socket, roomService));
