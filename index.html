@@ -6,16 +6,35 @@
     <title>Project Slow Life</title>
   </head>
   <body>
-    <button id="audio-toggle" class="audio-toggle" type="button" aria-pressed="false" aria-label="音声をミュート" title="音声をミュート">
-      <svg class="audio-on-icon" viewBox="0 0 24 24" aria-hidden="true">
-        <path d="M11 5 6 9H3v6h3l5 4V5Z"></path>
-        <path d="M15 9a4 4 0 0 1 0 6M18 6a8 8 0 0 1 0 12"></path>
-      </svg>
-      <svg class="audio-off-icon" viewBox="0 0 24 24" aria-hidden="true">
-        <path d="M11 5 6 9H3v6h3l5 4V5Z"></path>
-        <path d="m16 10 5 5M21 10l-5 5"></path>
-      </svg>
-    </button>
+    <div class="audio-controls">
+      <div id="volume-panel" class="volume-panel" hidden>
+        <label for="bgm-volume">
+          <span>BGM</span>
+          <output id="bgm-volume-value" for="bgm-volume">18%</output>
+        </label>
+        <input id="bgm-volume" type="range" min="0" max="100" step="1" value="18" />
+        <label for="se-volume">
+          <span>SE</span>
+          <output id="se-volume-value" for="se-volume">35%</output>
+        </label>
+        <input id="se-volume" type="range" min="0" max="100" step="1" value="35" />
+      </div>
+      <button id="volume-toggle" class="audio-settings-toggle" type="button" aria-expanded="false" aria-controls="volume-panel" aria-label="音量を調整" title="音量を調整">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M4 7h10M18 7h2M4 17h2M10 17h10M14 4v6M6 14v6"></path>
+        </svg>
+      </button>
+      <button id="audio-toggle" class="audio-toggle" type="button" aria-pressed="false" aria-label="音声をミュート" title="音声をミュート">
+        <svg class="audio-on-icon" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M11 5 6 9H3v6h3l5 4V5Z"></path>
+          <path d="M15 9a4 4 0 0 1 0 6M18 6a8 8 0 0 1 0 12"></path>
+        </svg>
+        <svg class="audio-off-icon" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M11 5 6 9H3v6h3l5 4V5Z"></path>
+          <path d="m16 10 5 5M21 10l-5 5"></path>
+        </svg>
+      </button>
+    </div>
     <div id="app"></div>
     <script type="module" src="/src/main.js"></script>
   </body>

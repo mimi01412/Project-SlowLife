@@ -54,6 +54,10 @@ export function setBgmMuted(muted) {
   audio.muted = muted;
 }
 
+export function setBgmVolume(volume) {
+  audio.volume = Math.max(0, Math.min(1, volume));
+}
+
 export function stopBgm() {
   playRequestId += 1;
   targetSource = null;
