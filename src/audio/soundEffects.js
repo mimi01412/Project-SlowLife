@@ -35,3 +35,10 @@ export function setSoundEffectsMuted(muted) {
     audio.muted = muted;
   });
 }
+
+export function setSoundEffectsVolume(volume) {
+  const normalizedVolume = Math.max(0, Math.min(1, volume));
+  sounds.forEach((audio) => {
+    audio.volume = normalizedVolume;
+  });
+}

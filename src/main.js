@@ -6,18 +6,27 @@ import { renderLobby } from './ui/lobbyView.js';
 import { renderResultView } from './ui/resultView.js';
 import { UI_TEXT } from './content/text.js';
 import { BGM_TRACKS } from './content/assets.js';
-import { setBgm, setBgmMuted, stopBgm } from './audio/bgm.js';
+import { setBgm, setBgmMuted, setBgmVolume, stopBgm } from './audio/bgm.js';
 import {
   playLineClearSound,
   playPlacementSound,
   playTurnSound,
   setSoundEffectsMuted,
+  setSoundEffectsVolume,
 } from './audio/soundEffects.js';
 
 const SESSION_KEY = 'slow-life-room-session';
 const AUDIO_MUTED_KEY = 'slow-life-audio-muted';
+const BGM_VOLUME_KEY = 'slow-life-bgm-volume';
+const SE_VOLUME_KEY = 'slow-life-se-volume';
 const app = document.querySelector('#app');
 const audioToggle = document.querySelector('#audio-toggle');
+const volumeToggle = document.querySelector('#volume-toggle');
+const volumePanel = document.querySelector('#volume-panel');
+const bgmVolumeInput = document.querySelector('#bgm-volume');
+const seVolumeInput = document.querySelector('#se-volume');
+const bgmVolumeValue = document.querySelector('#bgm-volume-value');
+const seVolumeValue = document.querySelector('#se-volume-value');
 document.title = UI_TEXT.common.pageTitle;
 const roomClient = createRoomClient();
 let currentRoom = null;
@@ -35,6 +44,23 @@ function loadMutedSetting() {
   }
 }
 
+function loadVolumeSetting(key, fallback) {
+  try {
+    const storedValue = localStorage.getItem(key);
+    if (storedValue === null) return fallback;
+    const value = Number(storedValue);
+    return Number.isFinite(value) && value >= 0 && value <= 100 ? value : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+function saveSetting(key, value) {
+  try {
+    localStorage.setItem(key, String(value));
+  } catch {}
+}
+
 function applyMutedSetting(muted) {
   setBgmMuted(muted);
   setSoundEffectsMuted(muted);
@@ -46,13 +72,52 @@ function applyMutedSetting(muted) {
 }
 
 let isAudioMuted = loadMutedSetting();
+const initialBgmVolume = loadVolumeSetting(BGM_VOLUME_KEY, 18);
+const initialSeVolume = loadVolumeSetting(SE_VOLUME_KEY, 35);
 applyMutedSetting(isAudioMuted);
+bgmVolumeInput.value = String(initialBgmVolume);
+seVolumeInput.value = String(initialSeVolume);
+bgmVolumeValue.textContent = `${initialBgmVolume}%`;
+seVolumeValue.textContent = `${initialSeVolume}%`;
+setBgmVolume(initialBgmVolume / 100);
+setSoundEffectsVolume(initialSeVolume / 100);
 audioToggle.addEventListener('click', () => {
   isAudioMuted = !isAudioMuted;
   applyMutedSetting(isAudioMuted);
-  try {
-    localStorage.setItem(AUDIO_MUTED_KEY, String(isAudioMuted));
-  } catch {}
+  saveSetting(AUDIO_MUTED_KEY, isAudioMuted);
+});
+
+volumeToggle.addEventListener('click', () => {
+  const willOpen = volumePanel.hidden;
+  volumePanel.hidden = !willOpen;
+  volumeToggle.setAttribute('aria-expanded', String(willOpen));
+});
+
+bgmVolumeInput.addEventListener('input', () => {
+  const volume = Number(bgmVolumeInput.value);
+  bgmVolumeValue.textContent = `${volume}%`;
+  setBgmVolume(volume / 100);
+  saveSetting(BGM_VOLUME_KEY, volume);
+});
+
+seVolumeInput.addEventListener('input', () => {
+  const volume = Number(seVolumeInput.value);
+  seVolumeValue.textContent = `${volume}%`;
+  setSoundEffectsVolume(volume / 100);
+  saveSetting(SE_VOLUME_KEY, volume);
+});
+
+document.addEventListener('pointerdown', (event) => {
+  if (volumePanel.hidden || event.target.closest('.audio-controls')) return;
+  volumePanel.hidden = true;
+  volumeToggle.setAttribute('aria-expanded', 'false');
+});
+
+document.addEventListener('keydown', (event) => {
+  if (event.key !== 'Escape' || volumePanel.hidden) return;
+  volumePanel.hidden = true;
+  volumeToggle.setAttribute('aria-expanded', 'false');
+  volumeToggle.focus();
 });
 
 function chimeIfMyTurn() {
