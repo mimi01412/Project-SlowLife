@@ -22,12 +22,19 @@ function normalizeCells(cells) {
   return cells.map(([x, y]) => [x - minX, y - minY]);
 }
 
+export function rotateCells(cells, rotationCount = 1) {
+  let rotatedCells = cells.map(([x, y]) => [x, y]);
+  const turns = ((rotationCount % 4) + 4) % 4;
+
+  for (let turn = 0; turn < turns; turn += 1) {
+    rotatedCells = normalizeCells(rotatedCells.map(([x, y]) => [y, -x]));
+  }
+
+  return rotatedCells;
+}
+
 export function createRandomPiece() {
   const template = SHAPES[Math.floor(Math.random() * SHAPES.length)];
   return createPiece(template);
-}
-
-export function rotatePiece(piece) {
-  piece.cells = normalizeCells(piece.cells.map(([x, y]) => [y, -x]));
 }
 
