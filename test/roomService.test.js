@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { canPlacePiece } from '../src/game/board.js';
 import { BOARD_SIZE, TURN_DURATION_MS } from '../src/game/config.js';
 import { rotateCells } from '../src/game/pieces.js';
-import { createRoomService, RoomError } from '../server/room/roomService.js';
+import { createRoomService, RoomError, serializeRoom } from '../server/room/roomService.js';
 
 test('creates a room and assigns its creator as host', () => {
   const service = createRoomService();
@@ -12,8 +12,10 @@ test('creates a room and assigns its creator as host', () => {
   assert.equal(room.id, 'slow-life');
   assert.equal(room.hostId, player.id);
   assert.equal(room.players[0].name, 'Alice');
+  assert.match(room.players[0].color, /^#[0-9a-f]{6}$/i);
   assert.equal(room.players[0].connected, true);
   assert.ok(player.reconnectToken);
+  assert.equal(serializeRoom(room).players[0].color, player.color);
 });
 
 test('joins an existing room up to eight players', () => {
@@ -25,6 +27,7 @@ test('joins an existing room up to eight players', () => {
   }
 
   assert.equal(service.getRoomBySocketId('player-8').players.length, 8);
+  assert.equal(new Set(service.getRoomBySocketId('player-8').players.map((player) => player.color)).size, 8);
   assert.throws(
     () => service.join({ socketId: 'player-9', name: 'Player 9', roomId: 'friends' }),
     (error) => error instanceof RoomError && error.code === 'ROOM_FULL',
@@ -69,6 +72,7 @@ test('only the host can start and the server creates a shared game state', () =>
   assert.equal(room.status, 'playing');
   assert.equal(room.game.currentPlayerId, host.id);
   assert.equal(room.game.hand.length, 3);
+  assert.deepEqual(room.game.hand.map((piece) => piece.color), ['#ff78c6', '#a98bff', '#55d6e8']);
   assert.equal(room.game.board.length, BOARD_SIZE);
 
   assert.throws(
@@ -103,14 +107,17 @@ test('places a piece on the server and advances exactly one turn', () => {
   service.place('host-socket', move);
   assert.equal(room.game.currentPlayerId, guest.id);
   assert.equal(room.game.turnNumber, 2);
+  assert.ok(room.game.lastPlacementId);
   const placedCells = rotateCells(piece.cells, move.rotation).map(([offsetX, offsetY]) => ({
     x: move.x + offsetX,
     y: move.y + offsetY,
   }));
   assert.deepEqual(room.game.lastPlacement, placedCells);
+  placedCells.forEach(({ x, y }) => assert.equal(room.game.board[y][x], host.color));
   assert.equal(room.game.hand.length, 3);
   assert.equal(room.game.hand[0].id, previousPieceIds[0]);
   assert.notEqual(room.game.hand[selectedIndex].id, previousPieceIds[selectedIndex]);
+  assert.equal(room.game.hand[selectedIndex].color, piece.color);
   assert.equal(room.game.hand[2].id, previousPieceIds[2]);
   assert.equal(room.game.turnOrder[0], host.id);
 });

@@ -467,6 +467,7 @@ canvas.is-clearing-line {
   align-items: center;
   gap: 0.4rem;
   padding: 0.45rem 0.55rem;
+  border-left: 3px solid var(--player-color, transparent);
   border-radius: 8px;
   color: #94a3b8;
   font-size: 0.72rem;
@@ -981,8 +982,10 @@ button:hover {
   flex: 0 0 34px;
   place-items: center;
   border-radius: 10px;
-  background: hsl(var(--avatar-hue) 45% 24%);
-  color: hsl(var(--avatar-hue) 85% 78%);
+  border: 1px solid color-mix(in srgb, var(--player-color) 55%, transparent);
+  background: color-mix(in srgb, var(--player-color) 24%, #1b0b31);
+  color: var(--player-color);
+  box-shadow: 0 0 14px color-mix(in srgb, var(--player-color) 24%, transparent);
   font-size: 0.82rem;
   font-weight: 800;
 }

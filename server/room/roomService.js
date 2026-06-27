@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { createGameSession, expireGameTurn, placeGamePiece, removePlayerFromGame } from '../game/gameSession.js';
 import { ERROR_TEXT } from '../../src/content/text.js';
+import { PLAYER_COLORS } from '../../src/game/playerColors.js';
 
 const MAX_PLAYERS = 8;
 const MAX_NAME_LENGTH = 16;
@@ -44,14 +45,20 @@ function hasSameName(room, name) {
   return room.players.some((player) => player.name.toLocaleLowerCase('ja') === comparableName);
 }
 
-function createPlayer(socketId, name) {
+function createPlayer(socketId, name, color) {
   return {
     id: randomUUID(),
     reconnectToken: randomUUID(),
     socketId,
     name,
+    color,
     connected: true,
   };
+}
+
+function getAvailablePlayerColor(players) {
+  const usedColors = new Set(players.map((player) => player.color));
+  return PLAYER_COLORS.find((color) => !usedColors.has(color)) ?? PLAYER_COLORS[players.length % PLAYER_COLORS.length];
 }
 
 function findPlayerBySocketId(room, socketId) {
@@ -124,7 +131,7 @@ export function createRoomService() {
     }
 
     leave(socketId);
-    const player = createPlayer(socketId, name);
+    const player = createPlayer(socketId, name, PLAYER_COLORS[0]);
     const room = {
       id: roomId,
       status: 'lobby',
@@ -153,7 +160,7 @@ export function createRoomService() {
     }
 
     leave(socketId);
-    const player = createPlayer(socketId, name);
+    const player = createPlayer(socketId, name, getAvailablePlayerColor(room.players));
     room.players.push(player);
     roomIdBySocketId.set(socketId, roomId);
     return { room, player };
@@ -260,7 +267,7 @@ export function serializeRoom(room) {
     status: room.status,
     hostId: room.hostId,
     maxPlayers: MAX_PLAYERS,
-    players: room.players.map(({ id, name, connected }) => ({ id, name, connected })),
+    players: room.players.map(({ id, name, color, connected }) => ({ id, name, color, connected })),
     game: room.game,
   };
 }
