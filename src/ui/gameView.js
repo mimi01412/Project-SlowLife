@@ -31,21 +31,30 @@ function buildMiniGrid(piece) {
 function drawBoard(canvas, board, preview = null) {
   const context = canvas.getContext('2d');
   context.clearRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
-  context.fillStyle = '#020617';
+  const boardGradient = context.createLinearGradient(0, 0, CANVAS_SIZE, CANVAS_SIZE);
+  boardGradient.addColorStop(0, '#24103f');
+  boardGradient.addColorStop(0.55, '#140a2a');
+  boardGradient.addColorStop(1, '#0c071a');
+  context.fillStyle = boardGradient;
   context.fillRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
 
   for (let row = 0; row < BOARD_SIZE; row += 1) {
     for (let column = 0; column < BOARD_SIZE; column += 1) {
       const x = column * CELL_SIZE;
       const y = row * CELL_SIZE;
-      context.fillStyle = '#111827';
+      context.fillStyle = 'rgba(42, 21, 70, 0.72)';
       context.fillRect(x + 1, y + 1, CELL_SIZE - 2, CELL_SIZE - 2);
-      context.strokeStyle = '#334155';
+      context.strokeStyle = 'rgba(211, 164, 255, 0.18)';
       context.strokeRect(x + 1, y + 1, CELL_SIZE - 2, CELL_SIZE - 2);
 
       if (board[row][column]) {
+        context.shadowColor = board[row][column];
+        context.shadowBlur = 10;
         context.fillStyle = board[row][column];
         context.fillRect(x + 3, y + 3, CELL_SIZE - 6, CELL_SIZE - 6);
+        context.fillStyle = 'rgba(255,255,255,0.22)';
+        context.fillRect(x + 5, y + 5, CELL_SIZE - 10, 3);
+        context.shadowBlur = 0;
       }
     }
   }
@@ -54,7 +63,7 @@ function drawBoard(canvas, board, preview = null) {
   preview.piece.cells.forEach(([offsetX, offsetY]) => {
     const x = (preview.x + offsetX) * CELL_SIZE;
     const y = (preview.y + offsetY) * CELL_SIZE;
-    context.fillStyle = preview.canPlace ? 'rgba(255,255,255,0.28)' : 'rgba(248,113,113,0.38)';
+    context.fillStyle = preview.canPlace ? 'rgba(255,183,223,0.42)' : 'rgba(251,113,133,0.46)';
     context.fillRect(x + 3, y + 3, CELL_SIZE - 6, CELL_SIZE - 6);
   });
 }

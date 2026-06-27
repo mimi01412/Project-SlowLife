@@ -1,4 +1,5 @@
 import { ERROR_TEXT, UI_TEXT } from '../content/text.js';
+import { IMAGE_ASSETS } from '../content/assets.js';
 
 const NAME_MAX_LENGTH = 16;
 const ROOM_ID_MIN_LENGTH = 2;
@@ -54,7 +55,14 @@ function renderNameScreen() {
         ${renderBrand()}
         <div class="entry-copy">
           <p class="eyebrow">${UI_TEXT.entry.category}</p>
-          <h1 id="entry-title">${UI_TEXT.entry.title}</h1>
+          <h1 id="entry-title" class="entry-title-logo">
+            <img
+              src="${IMAGE_ASSETS.logo}"
+              width="1916"
+              height="821"
+              alt="${UI_TEXT.common.appName}"
+            />
+          </h1>
           <p>${UI_TEXT.entry.description}</p>
         </div>
 
