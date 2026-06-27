@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { createGameSession, placeGamePiece, removePlayerFromGame } from '../game/gameSession.js';
+import { ERROR_TEXT } from '../../src/content/text.js';
 
 const MAX_PLAYERS = 8;
 const MAX_NAME_LENGTH = 16;
@@ -20,9 +21,9 @@ function normalize(value) {
 
 function validateName(value) {
   const name = normalize(value);
-  if (!name) throw new RoomError('INVALID_NAME', '名前を入力してください。');
+  if (!name) throw new RoomError('INVALID_NAME', ERROR_TEXT.nameRequired);
   if (name.length > MAX_NAME_LENGTH) {
-    throw new RoomError('INVALID_NAME', `名前は${MAX_NAME_LENGTH}文字以内で入力してください。`);
+    throw new RoomError('INVALID_NAME', ERROR_TEXT.nameTooLong(MAX_NAME_LENGTH));
   }
   return name;
 }
@@ -32,7 +33,7 @@ function validateRoomId(value) {
   if (roomId.length < MIN_ROOM_ID_LENGTH || roomId.length > MAX_ROOM_ID_LENGTH) {
     throw new RoomError(
       'INVALID_ROOM_ID',
-      `合言葉は${MIN_ROOM_ID_LENGTH}～${MAX_ROOM_ID_LENGTH}文字で入力してください。`,
+      ERROR_TEXT.roomIdLength(MIN_ROOM_ID_LENGTH, MAX_ROOM_ID_LENGTH),
     );
   }
   return roomId;
@@ -119,7 +120,7 @@ export function createRoomService() {
     const name = validateName(rawName);
     const roomId = validateRoomId(rawRoomId);
     if (rooms.has(roomId)) {
-      throw new RoomError('ROOM_EXISTS', 'その合言葉の部屋はすでに存在します。');
+      throw new RoomError('ROOM_EXISTS', ERROR_TEXT.roomExists);
     }
 
     leave(socketId);
@@ -142,13 +143,13 @@ export function createRoomService() {
     const roomId = validateRoomId(rawRoomId);
     const room = rooms.get(roomId);
 
-    if (!room) throw new RoomError('ROOM_NOT_FOUND', 'その合言葉の部屋は見つかりません。');
+    if (!room) throw new RoomError('ROOM_NOT_FOUND', ERROR_TEXT.roomNotFound);
     if (room.status !== 'lobby') {
-      throw new RoomError('GAME_ALREADY_STARTED', 'この部屋はすでにゲームを開始しています。');
+      throw new RoomError('GAME_ALREADY_STARTED', ERROR_TEXT.roomAlreadyPlaying);
     }
-    if (room.players.length >= MAX_PLAYERS) throw new RoomError('ROOM_FULL', 'この部屋は8人で満員です。');
+    if (room.players.length >= MAX_PLAYERS) throw new RoomError('ROOM_FULL', ERROR_TEXT.roomFull(MAX_PLAYERS));
     if (hasSameName(room, name)) {
-      throw new RoomError('NAME_TAKEN', '同じ名前のプレイヤーが参加しています。');
+      throw new RoomError('NAME_TAKEN', ERROR_TEXT.nameTaken);
     }
 
     leave(socketId);
@@ -163,8 +164,8 @@ export function createRoomService() {
     const room = rooms.get(roomId);
     const player = room?.players.find((candidate) => candidate.reconnectToken === reconnectToken);
 
-    if (!room || !player) throw new RoomError('SESSION_NOT_FOUND', '復帰できるセッションがありません。');
-    if (player.connected) throw new RoomError('SESSION_IN_USE', 'このプレイヤーはすでに接続しています。');
+    if (!room || !player) throw new RoomError('SESSION_NOT_FOUND', ERROR_TEXT.sessionNotFound);
+    if (player.connected) throw new RoomError('SESSION_IN_USE', ERROR_TEXT.sessionInUse);
 
     leave(socketId);
     player.socketId = socketId;
@@ -176,12 +177,12 @@ export function createRoomService() {
   function start(socketId) {
     const room = getRoomBySocketId(socketId);
     const player = room ? findPlayerBySocketId(room, socketId) : null;
-    if (!room || !player) throw new RoomError('NOT_IN_ROOM', '参加中の部屋がありません。');
+    if (!room || !player) throw new RoomError('NOT_IN_ROOM', ERROR_TEXT.notInRoom);
     if (room.hostId !== player.id) {
-      throw new RoomError('NOT_HOST', 'ゲームを開始できるのはホストだけです。');
+      throw new RoomError('NOT_HOST', ERROR_TEXT.onlyHostCanStart);
     }
     if (room.status !== 'lobby') {
-      throw new RoomError('GAME_ALREADY_STARTED', 'ゲームはすでに開始しています。');
+      throw new RoomError('GAME_ALREADY_STARTED', ERROR_TEXT.gameAlreadyStarted);
     }
 
     room.status = 'playing';
@@ -192,10 +193,40 @@ export function createRoomService() {
   function place(socketId, move) {
     const room = getRoomBySocketId(socketId);
     const player = room ? findPlayerBySocketId(room, socketId) : null;
-    if (!room || !player || !room.game) throw new RoomError('GAME_NOT_FOUND', '参加中のゲームがありません。');
+    if (!room || !player || !room.game) throw new RoomError('GAME_NOT_FOUND', ERROR_TEXT.gameNotFound);
 
     const result = placeGamePiece(room.game, player.id, move, room.players);
     if (result.finished) room.status = 'finished';
+    return room;
+  }
+
+  function getHostFinishedRoom(socketId) {
+    const room = getRoomBySocketId(socketId);
+    const player = room ? findPlayerBySocketId(room, socketId) : null;
+    if (!room || !player) throw new RoomError('NOT_IN_ROOM', ERROR_TEXT.notInRoom);
+    if (room.hostId !== player.id) {
+      throw new RoomError('NOT_HOST', ERROR_TEXT.onlyHostCanOperate);
+    }
+    if (room.status !== 'finished') {
+      throw new RoomError('GAME_NOT_FINISHED', ERROR_TEXT.gameNotFinished);
+    }
+    return room;
+  }
+
+  function rematch(socketId) {
+    const room = getHostFinishedRoom(socketId);
+    if (room.players.some((player) => !player.connected)) {
+      throw new RoomError('PLAYER_DISCONNECTED', ERROR_TEXT.playerDisconnected);
+    }
+    room.status = 'playing';
+    room.game = createGameSession(room.players);
+    return room;
+  }
+
+  function returnToLobby(socketId) {
+    const room = getHostFinishedRoom(socketId);
+    room.status = 'lobby';
+    room.game = null;
     return room;
   }
 
@@ -205,6 +236,8 @@ export function createRoomService() {
     resume,
     start,
     place,
+    rematch,
+    returnToLobby,
     leave,
     disconnect,
     removeDisconnected,

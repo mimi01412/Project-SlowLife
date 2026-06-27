@@ -3,9 +3,12 @@ import { createRoomClient } from './network/roomClient.js';
 import { createEntryFlow } from './ui/entryFlow.js';
 import { renderGameView } from './ui/gameView.js';
 import { renderLobby } from './ui/lobbyView.js';
+import { renderResultView } from './ui/resultView.js';
+import { UI_TEXT } from './content/text.js';
 
 const SESSION_KEY = 'slow-life-room-session';
 const app = document.querySelector('#app');
+document.title = UI_TEXT.common.pageTitle;
 const roomClient = createRoomClient();
 let currentRoom = null;
 let selfId = null;
@@ -40,7 +43,26 @@ function showRoom() {
   destroyCurrentView();
   destroyCurrentView = () => {};
 
-  if (currentRoom.status === 'playing' || currentRoom.status === 'finished') {
+  if (currentRoom.status === 'finished') {
+    renderResultView(app, {
+      room: currentRoom,
+      selfId,
+      onLeave: leaveCurrentRoom,
+      async onRematch() {
+        const response = await roomClient.rematch();
+        currentRoom = response.room;
+        showRoom();
+      },
+      async onReturnLobby() {
+        const response = await roomClient.returnToLobby();
+        currentRoom = response.room;
+        showRoom();
+      },
+    });
+    return;
+  }
+
+  if (currentRoom.status === 'playing') {
     destroyCurrentView = renderGameView(app, {
       room: currentRoom,
       selfId,
@@ -108,7 +130,7 @@ roomClient.onReconnect(async () => {
 });
 
 async function bootstrap() {
-  app.innerHTML = '<main class="loading-page" aria-label="接続中"><span></span></main>';
+  app.innerHTML = `<main class="loading-page" aria-label="${UI_TEXT.common.loading}"><span></span></main>`;
   if (!(await resumeSavedSession())) showEntry();
 }
 

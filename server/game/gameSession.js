@@ -1,6 +1,7 @@
 import { canPlacePiece, clearLines, createEmptyBoard, placePiece } from '../../src/game/board.js';
 import { BOARD_SIZE, HAND_SIZE } from '../../src/game/config.js';
 import { createRandomPiece, rotateCells } from '../../src/game/pieces.js';
+import { ERROR_TEXT, GAME_TEXT } from '../../src/content/text.js';
 
 export class GameError extends Error {
   constructor(code, message) {
@@ -21,7 +22,7 @@ function findPlayer(players, playerId) {
 function setCurrentPlayer(game, players) {
   game.currentPlayerId = game.turnOrder[game.turnIndex] ?? null;
   const currentPlayer = findPlayer(players, game.currentPlayerId);
-  game.message = currentPlayer ? `${currentPlayer.name}さんのターンです。` : 'プレイヤーがいません。';
+  game.message = currentPlayer ? GAME_TEXT.playerTurn(currentPlayer.name) : GAME_TEXT.noPlayers;
 }
 
 function advanceTurn(game, players) {
@@ -55,7 +56,7 @@ export function createGameSession(players) {
     turnOrder: players.map((player) => player.id),
     turnIndex: 0,
     currentPlayerId: players[0].id,
-    message: `${players[0].name}さんのターンです。`,
+    message: GAME_TEXT.playerTurn(players[0].name),
     finished: false,
   };
   fillHand(game);
@@ -63,21 +64,21 @@ export function createGameSession(players) {
 }
 
 export function placeGamePiece(game, playerId, move, players) {
-  if (game.finished) throw new GameError('GAME_FINISHED', 'このゲームは終了しています。');
-  if (game.currentPlayerId !== playerId) throw new GameError('NOT_YOUR_TURN', '現在はあなたのターンではありません。');
+  if (game.finished) throw new GameError('GAME_FINISHED', ERROR_TEXT.gameFinished);
+  if (game.currentPlayerId !== playerId) throw new GameError('NOT_YOUR_TURN', ERROR_TEXT.notYourTurn);
 
   const { pieceId, x, y, rotation = 0 } = move ?? {};
   if (!Number.isInteger(x) || !Number.isInteger(y) || !Number.isInteger(rotation)) {
-    throw new GameError('INVALID_MOVE', '配置情報が正しくありません。');
+    throw new GameError('INVALID_MOVE', ERROR_TEXT.invalidMove);
   }
 
   const pieceIndex = game.hand.findIndex((piece) => piece.id === pieceId);
-  if (pieceIndex === -1) throw new GameError('PIECE_NOT_FOUND', '選択したピースは手札にありません。');
+  if (pieceIndex === -1) throw new GameError('PIECE_NOT_FOUND', ERROR_TEXT.pieceNotFound);
 
   const piece = game.hand[pieceIndex];
   const rotatedPiece = { ...piece, cells: rotateCells(piece.cells, rotation) };
   if (!canPlacePiece(game.board, rotatedPiece, x, y)) {
-    throw new GameError('CANNOT_PLACE', 'その位置には配置できません。');
+    throw new GameError('CANNOT_PLACE', ERROR_TEXT.cannotPlace);
   }
 
   placePiece(game.board, rotatedPiece, x, y);
@@ -89,7 +90,7 @@ export function placeGamePiece(game, playerId, move, players) {
 
   if (!canPlaceAnyPiece(game)) {
     game.finished = true;
-    game.message = '置けるピースがなくなりました。';
+    game.message = GAME_TEXT.noPlaceablePieces;
     return { finished: true, cleared };
   }
 

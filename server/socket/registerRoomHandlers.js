@@ -1,5 +1,6 @@
 import { RoomError, serializeRoom } from '../room/roomService.js';
 import { GameError } from '../game/gameSession.js';
+import { ERROR_TEXT } from '../../src/content/text.js';
 
 const channelFor = (roomId) => `room:${roomId}`;
 const RECONNECT_GRACE_PERIOD = 30_000;
@@ -19,7 +20,7 @@ function sendResult(callback, action) {
       ok: false,
       error: {
         code: isExpectedError ? error.code : 'INTERNAL_ERROR',
-        message: isExpectedError ? error.message : 'サーバーでエラーが発生しました。',
+        message: isExpectedError ? error.message : ERROR_TEXT.server,
       },
     });
   }
@@ -72,6 +73,22 @@ export function registerRoomHandlers(io, socket, roomService) {
   socket.on('game:place', (move, callback) => {
     sendResult(callback, () => {
       const room = roomService.place(socket.id, move);
+      queueMicrotask(() => emitRoomState(io, room));
+      return { room: serializeRoom(room) };
+    });
+  });
+
+  socket.on('game:rematch', (callback) => {
+    sendResult(callback, () => {
+      const room = roomService.rematch(socket.id);
+      queueMicrotask(() => emitRoomState(io, room));
+      return { room: serializeRoom(room) };
+    });
+  });
+
+  socket.on('game:return-lobby', (callback) => {
+    sendResult(callback, () => {
+      const room = roomService.returnToLobby(socket.id);
       queueMicrotask(() => emitRoomState(io, room));
       return { room: serializeRoom(room) };
     });

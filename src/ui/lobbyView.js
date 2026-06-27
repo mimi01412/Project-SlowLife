@@ -1,3 +1,5 @@
+import { UI_TEXT } from '../content/text.js';
+
 function escapeHtml(value) {
   const element = document.createElement('span');
   element.textContent = value;
@@ -17,9 +19,9 @@ export function renderLobby(root, { room, selfId, onLeave, onStart }) {
           </span>
           <span class="lobby-player-name">
             ${escapeHtml(player.name)}
-            ${playerIsSelf ? '<small>あなた</small>' : ''}
+            ${playerIsSelf ? `<small>${UI_TEXT.common.self}</small>` : ''}
           </span>
-          ${playerIsHost ? '<span class="host-badge">HOST</span>' : ''}
+          ${playerIsHost ? `<span class="host-badge">${UI_TEXT.lobby.hostBadge}</span>` : ''}
         </li>
       `;
     })
@@ -30,21 +32,21 @@ export function renderLobby(root, { room, selfId, onLeave, onStart }) {
       <section class="lobby-shell" aria-labelledby="lobby-title">
         <header class="lobby-header">
           <div>
-            <p class="eyebrow">WAITING ROOM</p>
-            <h1 id="lobby-title">仲間を待っています</h1>
+            <p class="eyebrow">${UI_TEXT.lobby.category}</p>
+            <h1 id="lobby-title">${UI_TEXT.lobby.title}</h1>
           </div>
-          <button id="leave-room" class="text-button" type="button">退出する</button>
+          <button id="leave-room" class="text-button" type="button">${UI_TEXT.common.leave}</button>
         </header>
 
         <div class="room-code-panel">
-          <span>合言葉 / ルームID</span>
+          <span>${UI_TEXT.lobby.roomIdLabel}</span>
           <strong>${escapeHtml(room.id)}</strong>
-          <small>この合言葉を仲間に伝えてください</small>
+          <small>${UI_TEXT.lobby.roomIdHint}</small>
         </div>
 
         <section class="players-panel" aria-labelledby="players-title">
           <div class="players-heading">
-            <h2 id="players-title">参加メンバー</h2>
+            <h2 id="players-title">${UI_TEXT.common.players}</h2>
             <span>${room.players.length} / ${room.maxPlayers}</span>
           </div>
           <ul class="lobby-players">${players}</ul>
@@ -53,8 +55,8 @@ export function renderLobby(root, { room, selfId, onLeave, onStart }) {
         <div class="lobby-action">
           ${
             isHost
-              ? '<button id="start-game" class="primary-button" type="button">Play <span>→</span></button><p id="start-error" class="action-error" role="alert"></p>'
-              : '<div class="waiting-indicator"><i></i><span>ホストの開始を待っています</span></div>'
+              ? `<button id="start-game" class="primary-button" type="button">${UI_TEXT.lobby.start} <span>→</span></button><p id="start-error" class="action-error" role="alert"></p>`
+              : `<div class="waiting-indicator"><i></i><span>${UI_TEXT.lobby.waitingForHost}</span></div>`
           }
         </div>
       </section>

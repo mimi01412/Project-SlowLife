@@ -1,4 +1,5 @@
 import { io } from 'socket.io-client';
+import { ERROR_TEXT } from '../content/text.js';
 
 const REQUEST_TIMEOUT = 5000;
 
@@ -8,8 +9,8 @@ export function createRoomClient() {
   function request(event, payload) {
     return new Promise((resolve, reject) => {
       const handleResponse = (timeoutError, response) => {
-        if (timeoutError) return reject(new Error('サーバーに接続できませんでした。もう一度お試しください。'));
-        if (!response?.ok) return reject(new Error(response?.error?.message ?? '通信エラーが発生しました。'));
+        if (timeoutError) return reject(new Error(ERROR_TEXT.requestTimeout));
+        if (!response?.ok) return reject(new Error(response?.error?.message ?? ERROR_TEXT.network));
         resolve(response);
       };
 
@@ -25,6 +26,8 @@ export function createRoomClient() {
     resumeRoom: (payload) => request('room:resume', payload),
     startRoom: () => request('room:start'),
     placePiece: (payload) => request('game:place', payload),
+    rematch: () => request('game:rematch'),
+    returnToLobby: () => request('game:return-lobby'),
     leaveRoom: () => request('room:leave'),
     onRoomState(handler) {
       socket.on('room:state', handler);

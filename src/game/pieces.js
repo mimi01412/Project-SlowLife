@@ -38,7 +38,3 @@ export function createRandomPiece() {
   return createPiece(template);
 }
 
-export function rotatePiece(piece) {
-  piece.cells = rotateCells(piece.cells);
-}
-

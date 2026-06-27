@@ -121,3 +121,29 @@ test('resumes a disconnected player with a stable player id', () => {
   assert.equal(resumed.player.connected, true);
   assert.equal(service.getRoomBySocketId('new-socket'), resumed.room);
 });
+
+test('lets only the host rematch or return everyone to the lobby', () => {
+  const service = createRoomService();
+  service.create({ socketId: 'host-socket', name: 'Host', roomId: 'result-room' });
+  service.join({ socketId: 'guest-socket', name: 'Guest', roomId: 'result-room' });
+  const room = service.start('host-socket');
+  const previousPieceIds = room.game.hand.map((piece) => piece.id);
+  room.status = 'finished';
+  room.game.finished = true;
+
+  assert.throws(() => service.rematch('guest-socket'), (error) => error.code === 'NOT_HOST');
+
+  service.rematch('host-socket');
+  assert.equal(room.status, 'playing');
+  assert.equal(room.game.score, 0);
+  assert.notDeepEqual(room.game.hand.map((piece) => piece.id), previousPieceIds);
+
+  room.status = 'finished';
+  room.game.finished = true;
+  service.returnToLobby('host-socket');
+  assert.equal(room.status, 'lobby');
+  assert.equal(room.game, null);
+
+  const lateJoin = service.join({ socketId: 'late-socket', name: 'Late', roomId: 'result-room' });
+  assert.equal(lateJoin.room.players.length, 3);
+});

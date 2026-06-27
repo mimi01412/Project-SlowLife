@@ -1,3 +1,5 @@
+import { ERROR_TEXT, UI_TEXT } from '../content/text.js';
+
 const NAME_MAX_LENGTH = 16;
 const ROOM_ID_MIN_LENGTH = 2;
 const ROOM_ID_MAX_LENGTH = 24;
@@ -21,26 +23,26 @@ function normalizeInput(value) {
 
 function validateName(value) {
   const name = normalizeInput(value);
-  if (!name) return '名前を入力してください。';
-  if (name.length > NAME_MAX_LENGTH) return `名前は${NAME_MAX_LENGTH}文字以内で入力してください。`;
+  if (!name) return ERROR_TEXT.nameRequired;
+  if (name.length > NAME_MAX_LENGTH) return ERROR_TEXT.nameTooLong(NAME_MAX_LENGTH);
   return '';
 }
 
 function validateRoomId(value) {
   const roomId = normalizeInput(value);
-  if (!roomId) return '合言葉を入力してください。';
-  if (roomId.length < ROOM_ID_MIN_LENGTH) return `合言葉は${ROOM_ID_MIN_LENGTH}文字以上で入力してください。`;
-  if (roomId.length > ROOM_ID_MAX_LENGTH) return `合言葉は${ROOM_ID_MAX_LENGTH}文字以内で入力してください。`;
+  if (!roomId) return ERROR_TEXT.roomIdRequired;
+  if (roomId.length < ROOM_ID_MIN_LENGTH) return ERROR_TEXT.roomIdTooShort(ROOM_ID_MIN_LENGTH);
+  if (roomId.length > ROOM_ID_MAX_LENGTH) return ERROR_TEXT.roomIdTooLong(ROOM_ID_MAX_LENGTH);
   return '';
 }
 
 function renderBrand() {
   return `
-    <div class="entry-brand" aria-label="Slow Life Blocks">
+    <div class="entry-brand" aria-label="${UI_TEXT.common.appName}">
       <span class="brand-mark" aria-hidden="true">
         <i></i><i></i><i></i><i></i>
       </span>
-      <span>Slow Life Blocks</span>
+      <span>${UI_TEXT.common.appName}</span>
     </div>
   `;
 }
@@ -51,13 +53,13 @@ function renderNameScreen() {
       <section class="entry-card" aria-labelledby="entry-title">
         ${renderBrand()}
         <div class="entry-copy">
-          <p class="eyebrow">CO-OP PUZZLE</p>
-          <h1 id="entry-title">みんなで、ひとつの盤面を。</h1>
-          <p>名前を決めたら、仲間の部屋へ向かいましょう。</p>
+          <p class="eyebrow">${UI_TEXT.entry.category}</p>
+          <h1 id="entry-title">${UI_TEXT.entry.title}</h1>
+          <p>${UI_TEXT.entry.description}</p>
         </div>
 
         <form id="name-form" class="entry-form" novalidate>
-          <label for="player-name">あなたの名前</label>
+          <label for="player-name">${UI_TEXT.entry.nameLabel}</label>
           <div class="input-wrap">
             <input
               id="player-name"
@@ -66,16 +68,16 @@ function renderNameScreen() {
               value="${escapeHtml(state.playerName)}"
               maxlength="${NAME_MAX_LENGTH}"
               autocomplete="nickname"
-              placeholder="例：dongu"
+              placeholder="${UI_TEXT.entry.namePlaceholder}"
               aria-describedby="name-hint name-error"
               autofocus
             />
             <span class="input-count" id="name-count">${state.playerName.length}/${NAME_MAX_LENGTH}</span>
           </div>
-          <p class="field-hint" id="name-hint">部屋のメンバーに表示される名前です。</p>
+          <p class="field-hint" id="name-hint">${UI_TEXT.entry.nameHint}</p>
           <p class="field-error" id="name-error" role="alert"></p>
           <button class="primary-button" type="submit">
-            次へ
+            ${UI_TEXT.entry.next}
             <span aria-hidden="true">→</span>
           </button>
         </form>
@@ -86,10 +88,10 @@ function renderNameScreen() {
 
 function renderRoomScreen() {
   const isCreateMode = state.roomMode === 'create';
-  const title = isCreateMode ? '新しい部屋を作る' : '部屋に参加する';
+  const title = isCreateMode ? UI_TEXT.entry.createRoomTitle : UI_TEXT.entry.joinRoomTitle;
   const description = isCreateMode
-    ? '仲間に伝える合言葉を決めてください。'
-    : '仲間から教えてもらった合言葉を入力してください。';
+    ? UI_TEXT.entry.createRoomDescription
+    : UI_TEXT.entry.joinRoomDescription;
 
   return `
     <main class="entry-page">
@@ -98,25 +100,25 @@ function renderRoomScreen() {
 
         <div class="player-chip">
           <span class="player-avatar" aria-hidden="true">${escapeHtml(state.playerName.slice(0, 1).toUpperCase())}</span>
-          <span><small>プレイヤー</small>${escapeHtml(state.playerName)}</span>
-          <button id="edit-name" type="button">変更</button>
+          <span><small>${UI_TEXT.entry.player}</small>${escapeHtml(state.playerName)}</span>
+          <button id="edit-name" type="button">${UI_TEXT.entry.edit}</button>
         </div>
 
-        <div class="mode-switch" role="tablist" aria-label="部屋への入り方">
+        <div class="mode-switch" role="tablist" aria-label="${UI_TEXT.entry.roomModeLabel}">
           <button
             type="button"
             role="tab"
             data-room-mode="create"
             aria-selected="${isCreateMode}"
             class="${isCreateMode ? 'active' : ''}"
-          >部屋を作る</button>
+          >${UI_TEXT.entry.createRoomTab}</button>
           <button
             type="button"
             role="tab"
             data-room-mode="join"
             aria-selected="${!isCreateMode}"
             class="${!isCreateMode ? 'active' : ''}"
-          >部屋に参加</button>
+          >${UI_TEXT.entry.joinRoomTab}</button>
         </div>
 
         <div class="entry-copy compact">
@@ -126,7 +128,7 @@ function renderRoomScreen() {
         </div>
 
         <form id="room-form" class="entry-form" novalidate>
-          <label for="room-id">合言葉 <span>＝ ルームID</span></label>
+          <label for="room-id">${UI_TEXT.entry.roomIdLabel} <span>${UI_TEXT.entry.roomIdSupplement}</span></label>
           <input
             id="room-id"
             name="roomId"
@@ -136,14 +138,14 @@ function renderRoomScreen() {
             maxlength="${ROOM_ID_MAX_LENGTH}"
             autocomplete="off"
             spellcheck="false"
-            placeholder="例：slow-life"
+            placeholder="${UI_TEXT.entry.roomIdPlaceholder}"
             aria-describedby="room-hint room-error"
             autofocus
           />
-          <p class="field-hint" id="room-hint">英数字・日本語のどちらでも使えます。</p>
+          <p class="field-hint" id="room-hint">${UI_TEXT.entry.roomIdHint}</p>
           <p class="field-error" id="room-error" role="alert"></p>
           <button class="primary-button" type="submit">
-            ${isCreateMode ? '部屋を作成' : '部屋に参加'}
+            ${isCreateMode ? UI_TEXT.entry.createRoomSubmit : UI_TEXT.entry.joinRoomSubmit}
             <span aria-hidden="true">→</span>
           </button>
         </form>

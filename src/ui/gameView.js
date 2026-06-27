@@ -1,6 +1,7 @@
 import { canPlacePiece } from '../game/board.js';
 import { BOARD_SIZE, CANVAS_SIZE, CELL_SIZE, TOUCH_DRAG_OFFSET_Y } from '../game/config.js';
 import { rotateCells } from '../game/pieces.js';
+import { UI_TEXT } from '../content/text.js';
 
 let openParticipantsRoomId = null;
 
@@ -87,9 +88,9 @@ export function renderGameView(root, { room, selfId, onLeave, onPlace }) {
       (player) => `
         <li class="game-player${player.id === game.currentPlayerId ? ' is-current' : ''}${player.connected ? '' : ' is-offline'}">
           <span>${escapeHtml(player.name)}</span>
-          ${player.id === selfId ? '<small>あなた</small>' : ''}
-          ${player.connected ? '' : '<small>再接続待ち</small>'}
-          ${player.id === game.currentPlayerId ? '<strong>TURN</strong>' : ''}
+          ${player.id === selfId ? `<small>${UI_TEXT.common.self}</small>` : ''}
+          ${player.connected ? '' : `<small>${UI_TEXT.game.reconnecting}</small>`}
+          ${player.id === game.currentPlayerId ? `<strong>${UI_TEXT.game.turnBadge}</strong>` : ''}
         </li>
       `,
     )
@@ -100,42 +101,42 @@ export function renderGameView(root, { room, selfId, onLeave, onPlace }) {
       <section class="game-shell online-game-shell">
         <header class="game-header">
           <div>
-            <p class="eyebrow">ROOM ${escapeHtml(room.id)}</p>
-            <h1>Slow Life Blocks</h1>
+            <p class="eyebrow">${UI_TEXT.game.roomLabel} ${escapeHtml(room.id)}</p>
+            <h1>${UI_TEXT.common.appName}</h1>
           </div>
           <div class="game-header-actions">
-            <button id="open-players" class="participants-icon-button" type="button" aria-haspopup="dialog" aria-label="参加メンバーを表示">
+            <button id="open-players" class="participants-icon-button" type="button" aria-haspopup="dialog" aria-label="${UI_TEXT.game.showPlayers}">
               <svg viewBox="0 0 24 24" aria-hidden="true">
                 <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" />
               </svg>
               <strong>${room.players.length}</strong>
             </button>
-            <button id="leave-game" class="text-button" type="button">退出する</button>
+            <button id="leave-game" class="text-button" type="button">${UI_TEXT.common.leave}</button>
           </div>
         </header>
 
         <div class="hud">
-          <span>Score <strong>${game.score}</strong></span>
-          <span>Clear <strong>${game.cleared}</strong></span>
-          <span>Turn <strong>${game.turnNumber}</strong></span>
+          <span>${UI_TEXT.game.score} <strong>${game.score}</strong></span>
+          <span>${UI_TEXT.game.clear} <strong>${game.cleared}</strong></span>
+          <span>${UI_TEXT.game.turn} <strong>${game.turnNumber}</strong></span>
         </div>
 
         <div class="turn-banner${isMyTurn ? ' is-mine' : ''}${game.finished ? ' is-finished' : ''}">
           <span>${
             game.finished
-              ? 'ゲーム終了'
+              ? UI_TEXT.game.finished
               : isMyTurn
-                ? 'あなたのターンです'
-                : `${escapeHtml(currentPlayer?.name ?? '')}さんのターンです`
+                ? UI_TEXT.game.yourTurn
+                : UI_TEXT.game.playerTurn(escapeHtml(currentPlayer?.name ?? ''))
           }</span>
           <small id="game-message">${escapeHtml(game.message)}</small>
         </div>
 
         <div class="layout">
-          <canvas id="board" width="${CANVAS_SIZE}" height="${CANVAS_SIZE}" aria-label="共有ゲーム盤面"></canvas>
+          <canvas id="board" width="${CANVAS_SIZE}" height="${CANVAS_SIZE}" aria-label="${UI_TEXT.game.boardLabel}"></canvas>
           <aside class="side-panel">
             <section class="panel">
-              <h2>共有の手札</h2>
+              <h2>${UI_TEXT.game.handTitle}</h2>
               <div class="hand">${hand}</div>
             </section>
           </aside>
@@ -144,10 +145,10 @@ export function renderGameView(root, { room, selfId, onLeave, onPlace }) {
       <dialog id="players-dialog" class="players-dialog" aria-labelledby="players-dialog-title">
         <header>
           <div>
-            <p>ROOM MEMBERS</p>
-            <h2 id="players-dialog-title">参加メンバー</h2>
+            <p>${UI_TEXT.game.membersCategory}</p>
+            <h2 id="players-dialog-title">${UI_TEXT.common.players}</h2>
           </div>
-          <button id="close-players" type="button" aria-label="閉じる">×</button>
+          <button id="close-players" type="button" aria-label="${UI_TEXT.common.close}">×</button>
         </header>
         <ul>${players}</ul>
       </dialog>
@@ -187,7 +188,7 @@ export function renderGameView(root, { room, selfId, onLeave, onPlace }) {
   function rotateSelection() {
     if (!selectedPieceId || pending) return;
     rotation = (rotation + 1) % 4;
-    message.textContent = 'ピースを回転しました。';
+    message.textContent = UI_TEXT.game.rotated;
     renderInteraction();
   }
 
@@ -205,19 +206,19 @@ export function renderGameView(root, { room, selfId, onLeave, onPlace }) {
 
     if (!cell || !selectedPieceId) {
       selectedPieceId = null;
-      message.textContent = '配置をキャンセルしました。';
+      message.textContent = UI_TEXT.game.placementCancelled;
       return renderInteraction();
     }
 
     const piece = getSelectedPiece();
     if (!canPlacePiece(game.board, piece, cell.x, cell.y)) {
       selectedPieceId = null;
-      message.textContent = 'その位置には配置できません。';
+      message.textContent = UI_TEXT.game.cannotPlace;
       return renderInteraction();
     }
 
     pending = true;
-    message.textContent = '配置を確認しています…';
+    message.textContent = UI_TEXT.game.checkingPlacement;
     try {
       await onPlace({ pieceId: selectedPieceId, x: cell.x, y: cell.y, rotation });
     } catch (error) {
@@ -234,7 +235,7 @@ export function renderGameView(root, { room, selfId, onLeave, onPlace }) {
     dragPointerId = null;
     selectedPieceId = null;
     hoverCell = null;
-    message.textContent = '配置をキャンセルしました。';
+    message.textContent = UI_TEXT.game.placementCancelled;
     renderInteraction();
   };
 
@@ -260,7 +261,7 @@ export function renderGameView(root, { room, selfId, onLeave, onPlace }) {
       rotation = 0;
       hoverCell = null;
       dragPointerId = event.pointerId;
-      message.textContent = '盤面へドラッグしてください。スペースキーまたは2本目の指で回転できます。';
+      message.textContent = UI_TEXT.game.dragHelp;
       renderInteraction();
     });
   });
