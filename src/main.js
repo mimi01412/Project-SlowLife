@@ -31,8 +31,6 @@ app.innerHTML = `
         </div>
         <div class="panel controls">
           <p id="message">手札を選んで盤面に置きましょう。</p>
-          <button id="rotate" type="button">回転</button>
-          <button id="reset" type="button">リセット</button>
         </div>
       </div>
     </div>
@@ -46,17 +44,17 @@ const clearsEl = document.querySelector('#clears');
 const stockEl = document.querySelector('#stock');
 const handEl = document.querySelector('#hand');
 const messageEl = document.querySelector('#message');
-const rotateButton = document.querySelector('#rotate');
-const resetButton = document.querySelector('#reset');
 
 const state = {
   board: createEmptyBoard(),
   hand: [],
   selectedIndex: null,
   hoverCell: null,
+  isDragging: false,
+  dragPointerId: null,
   score: 0,
   cleared: 0,
-  message: '手札を選んで盤面に置きましょう。',
+  message: '手札をつかんでボードへドラッグしてください。スマホは画面タップで回転です。',
 };
 
 function createEmptyBoard() {
@@ -110,9 +108,19 @@ function renderHand() {
       <span class="piece-name">${piece.name}</span>
       <div class="piece-preview">${buildMiniGrid(piece)}</div>
     `;
-    button.addEventListener('click', () => {
-      state.selectedIndex = index;
-      state.message = '配置先をクリックしてください。';
+    button.addEventListener('pointerdown', (event) => {
+      if (event.pointerType === 'mouse' && event.button !== 0) return;
+      event.preventDefault();
+      if (state.selectedIndex !== index) {
+        state.selectedIndex = index;
+      }
+      state.isDragging = true;
+      state.dragPointerId = event.pointerId;
+      state.hoverCell = null;
+      state.message =
+        event.pointerType === 'touch' || event.pointerType === 'pen'
+          ? '手札をつかんでボードへドラッグし、離して配置します。ドラッグ中に画面タップで回転、盤面外タップでキャンセルします。'
+          : '手札をつかんでボードへドラッグし、離して配置します。スペースで回転できます。';
       updateHud();
       renderHand();
       renderBoard();
@@ -260,54 +268,100 @@ function getCellFromPointer(event) {
   return { x, y };
 }
 
-canvas.addEventListener('pointermove', (event) => {
+canvas.addEventListener('pointerleave', () => {
+  if (!state.isDragging) {
+    state.hoverCell = null;
+    renderBoard();
+  }
+});
+
+window.addEventListener('pointermove', (event) => {
+  if (!state.isDragging || event.pointerId !== state.dragPointerId) return;
   state.hoverCell = getCellFromPointer(event);
   renderBoard();
 });
 
-canvas.addEventListener('pointerleave', () => {
-  state.hoverCell = null;
-  renderBoard();
-});
+window.addEventListener('pointerup', (event) => {
+  if (!state.isDragging || event.pointerId !== state.dragPointerId) return;
+  state.isDragging = false;
+  state.dragPointerId = null;
 
-canvas.addEventListener('pointerdown', (event) => {
   const cell = getCellFromPointer(event);
-  if (!cell) return;
-  event.preventDefault();
-  handlePlacement(cell.x, cell.y);
-});
-
-rotateButton.addEventListener('click', () => {
-  if (state.selectedIndex === null) {
-    state.message = '先に手札を選んでください。';
-    updateHud();
+  if (cell && state.selectedIndex !== null && canPlacePiece(state.hand[state.selectedIndex], cell.x, cell.y)) {
+    handlePlacement(cell.x, cell.y);
     return;
   }
-  rotatePiece(state.hand[state.selectedIndex]);
-  state.message = '回転しました。';
+
+  state.selectedIndex = null;
+  state.message = '配置をキャンセルしました。再度手札をつかんでください。';
+  state.hoverCell = null;
   updateHud();
-  renderHand();
   renderBoard();
 });
 
-resetButton.addEventListener('click', () => {
-  state.board = createEmptyBoard();
-  state.hand = [];
+window.addEventListener('pointercancel', (event) => {
+  if (!state.isDragging || event.pointerId !== state.dragPointerId) return;
+  state.isDragging = false;
+  state.dragPointerId = null;
   state.selectedIndex = null;
   state.hoverCell = null;
-  state.score = 0;
-  state.cleared = 0;
-  state.message = '盤面をリセットしました。';
-  fillHand();
+  state.message = 'ドラッグがキャンセルされました。';
+  updateHud();
+  renderBoard();
+});
+
+window.addEventListener('pointerdown', (event) => {
+  if (!state.isDragging || event.pointerId === state.dragPointerId) return;
+  if (event.pointerType !== 'touch' && event.pointerType !== 'pen') return;
+
+  const isPointerOnBoard = event.target instanceof Element && event.target.closest('#board');
+  if (!isPointerOnBoard) {
+    state.isDragging = false;
+    state.dragPointerId = null;
+    state.selectedIndex = null;
+    state.hoverCell = null;
+    state.message = 'ドラッグをリセットしました。再度手札をつかんでください。';
+    updateHud();
+    renderBoard();
+    return;
+  }
+
+  event.preventDefault();
+  if (state.selectedIndex === null) return;
+  rotatePiece(state.hand[state.selectedIndex]);
+  state.message = '回転しました。配置位置を選択してください。';
   updateHud();
   renderHand();
   renderBoard();
 });
 
 window.addEventListener('keydown', (event) => {
+  if (event.key === ' ' || event.key === 'Spacebar') {
+    if (!state.isDragging || state.selectedIndex === null) return;
+    event.preventDefault();
+    rotatePiece(state.hand[state.selectedIndex]);
+    state.message = '回転しました。配置位置を選択してください。';
+    updateHud();
+    renderHand();
+    renderBoard();
+    return;
+  }
+
   if (event.key.toLowerCase() === 'r') {
     event.preventDefault();
-    rotateButton.click();
+    state.board = createEmptyBoard();
+    state.hand = [];
+    state.selectedIndex = null;
+    state.hoverCell = null;
+    state.isDragging = false;
+    state.dragPointerId = null;
+    state.score = 0;
+    state.cleared = 0;
+    state.message = '盤面をリセットしました。';
+    fillHand();
+    updateHud();
+    renderHand();
+    renderBoard();
   }
 });
 

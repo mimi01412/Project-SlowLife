@@ -1,3 +1,10 @@
+html,
+body {
+  min-height: 100vh;
+  height: 100vh;
+  overflow: hidden;
+}
+
 :root {
   color-scheme: dark;
   font-family: 'Segoe UI', sans-serif;
@@ -11,7 +18,6 @@
 
 body {
   margin: 0;
-  min-height: 100vh;
   display: grid;
   place-items: center;
   padding: 1rem;
@@ -20,10 +26,23 @@ body {
 
 .game-shell {
   width: min(100%, 980px);
+  max-height: 100vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
   padding: clamp(0.9rem, 2vw, 1.25rem);
   border-radius: 20px;
   background: rgba(15, 23, 42, 0.9);
   box-shadow: 0 20px 50px rgba(0, 0, 0, 0.35);
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(220px, 260px);
+  gap: 1rem;
+  align-items: start;
+  flex: 1 1 auto;
+  overflow: hidden;
 }
 
 h1 {
@@ -50,6 +69,7 @@ h1 {
 
 canvas {
   width: 100%;
+  height: auto;
   max-width: 640px;
   aspect-ratio: 1 / 1;
   display: block;
@@ -57,6 +77,9 @@ canvas {
   border-radius: 10px;
   background: #020617;
   touch-action: none;
+  max-height: 100%;
+  object-fit: contain;
+  image-rendering: crisp-edges;
 }
 
 .side-panel {
@@ -89,6 +112,7 @@ canvas {
   background: #0f172a;
   color: #f8fafc;
   cursor: pointer;
+  touch-action: none;
 }
 
 .piece-card.selected {
@@ -147,33 +171,59 @@ button:hover {
 
 @media (max-width: 800px) {
   body {
-    padding: 0.7rem;
+    padding: 0.5rem;
     align-items: start;
   }
 
   .game-shell {
     width: 100%;
+    max-height: 100vh;
     padding: 0.8rem;
   }
 
   .layout {
     grid-template-columns: 1fr;
+    gap: 0.8rem;
   }
 
   .hud {
     justify-content: space-between;
-    flex-wrap: nowrap;
+    flex-wrap: wrap;
     overflow-x: auto;
     padding-bottom: 0.2rem;
   }
 
+  canvas {
+    width: min(100%, calc(100vh - 200px));
+    height: auto;
+    max-height: min(100vw, calc(100vh - 200px));
+  }
+
+  .side-panel {
+    min-width: 0;
+  }
+
+  .hand {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.3rem;
+    overflow: hidden;
+    padding-bottom: 0.2rem;
+  }
+
+  .piece-card {
+    min-width: 0;
+    padding: 0.45rem;
+  }
+
   .controls {
-    flex-direction: row;
-    flex-wrap: wrap;
+    flex-direction: column;
+    gap: 0.65rem;
   }
 
   button {
-    flex: 1 1 140px;
+    width: 100%;
+    flex-basis: auto;
   }
 }
 
