@@ -260,19 +260,20 @@ function getCellFromPointer(event) {
   return { x, y };
 }
 
-canvas.addEventListener('mousemove', (event) => {
+canvas.addEventListener('pointermove', (event) => {
   state.hoverCell = getCellFromPointer(event);
   renderBoard();
 });
 
-canvas.addEventListener('mouseleave', () => {
+canvas.addEventListener('pointerleave', () => {
   state.hoverCell = null;
   renderBoard();
 });
 
-canvas.addEventListener('click', (event) => {
+canvas.addEventListener('pointerdown', (event) => {
   const cell = getCellFromPointer(event);
   if (!cell) return;
+  event.preventDefault();
   handlePlacement(cell.x, cell.y);
 });
 
