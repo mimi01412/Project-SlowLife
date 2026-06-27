@@ -1,11 +1,11 @@
 import './style.css';
-import { createGame } from './game/game.js';
-import { setupControls } from './input/controls.js';
-import { createGameView } from './ui/gameView.js';
+import { createEntryFlow } from './ui/entryFlow.js';
 
 const app = document.querySelector('#app');
-const game = createGame();
-const view = createGameView(app, game);
 
-setupControls(game, view);
-view.render();
+createEntryFlow(app, {
+  onRoomRequest(request) {
+    // The transport will be connected here in the next implementation stage.
+    console.info('Room request ready:', request);
+  },
+});
