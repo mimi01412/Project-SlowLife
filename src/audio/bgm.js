@@ -1,7 +1,7 @@
 const audio = new Audio();
 audio.loop = true;
 audio.preload = 'auto';
-audio.volume = 0.35;
+audio.volume = 0.175;
 
 let targetSource = null;
 let loadedSource = null;
