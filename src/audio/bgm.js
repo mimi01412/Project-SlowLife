@@ -50,6 +50,10 @@ export function setBgm(source) {
   playTarget();
 }
 
+export function setBgmMuted(muted) {
+  audio.muted = muted;
+}
+
 export function stopBgm() {
   playRequestId += 1;
   targetSource = null;
